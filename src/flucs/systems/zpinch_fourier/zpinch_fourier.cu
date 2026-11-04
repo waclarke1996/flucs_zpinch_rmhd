@@ -343,6 +343,124 @@ struct ZPEnergyNonlinear_Functor {
     }
 };
 
+////////////////////////////////////////////////////////////////////////////////
+// The four quadratic invariants of the nonlinear terms (c = C_DBPAR, s = sqrt c):
+//   inv 0 W_zeta+ = 1/2 <|grad zeta+|^2>,  zeta+- = Phi +- Psi
+//   inv 1 W_zeta- = 1/2 <|grad zeta-|^2>
+//   inv 2 W_Z+    = 1/2 <Z+^2>,            Z+- = upar +- s dBpar
+//   inv 3 W_Z-    = 1/2 <Z-^2>
+// (curvy3d: zplus, zminus, Zpplus, Zpminus; E = (W_z+ + W_z- + W_Z+ + W_Z-)/2.)
+// NL(Z+-) = -{Phi -+ Psi/s, Z+-}; the Alfvenic part is RMHD Elsasser, so the
+// nonlinear terms conserve each invariant separately.
+// Linear source of each (parallel streaming drops out exactly):
+//   zeta+-: exch = 2 <dBpar d_y zeta+->,                    inj = 0
+//   Z+-   : exch = -+(2/s) <Z+- d_y Phi>,
+//           inj  = -kb kP <Z+- d_y Psi> +- (kP (1+kb)/s) <Z+- d_y Phi>
+// with sum_inv inj / 2 = kP Qhat and sum_inv exch = 0 (curvature exchange).
+// curvy3d's "<inv>_inj" = exch + inj (as half-space sums).
+// quantity: 0 W density, 1 inj, 2 exch
+////////////////////////////////////////////////////////////////////////////////
+
+struct ZPInvariant_Functor {
+    const FLUCS_COMPLEX* __restrict__ fields_global;
+    const int which;
+    const int quantity;
+    __device__ __forceinline__ FLUCS_FLOAT operator()(size_t index) const {
+        indices3d_t indices = get_indices3d<NZ, NX, HALF_NY>(index);
+        const FLUCS_FLOAT kx = kx_from_ikx(indices.ikx);
+        const FLUCS_FLOAT ky = ky_from_iky(indices.iky);
+        const FLUCS_COMPLEX dy = dy_from_iky(indices.iky);
+        const FLUCS_FLOAT kperp2 = kx*kx + ky*ky;
+        const FLUCS_FLOAT s = flucs_sqrt(C_DBPAR);
+        const FLUCS_FLOAT sgn = (which % 2 == 0) ? FLOAT_ONE : -FLOAT_ONE;
+
+        const FLUCS_COMPLEX phi = fields_global[index];
+        const FLUCS_COMPLEX psi = fields_global[index + HALFSIZE];
+        const FLUCS_COMPLEX dbpar = fields_global[index + 2*HALFSIZE];
+        const FLUCS_COMPLEX upar = fields_global[index + 3*HALFSIZE];
+
+        if (which < 2) {
+            const FLUCS_COMPLEX zeta = phi + sgn * psi;
+            switch (quantity) {
+                case 0: return ((FLUCS_FLOAT)0.5) * kperp2 * zp_abs2(zeta);
+                case 1: return (FLUCS_FLOAT)0;
+                default: return ((FLUCS_FLOAT)2.0) * (dy * zeta * conj(dbpar)).real();
+            }
+        } else {
+            const FLUCS_COMPLEX Z = upar + sgn * s * dbpar;
+            switch (quantity) {
+                case 0: return ((FLUCS_FLOAT)0.5) * zp_abs2(Z);
+                case 1: return (
+                      (-KBKP * dy * psi
+                       + (sgn * KP * (FLOAT_ONE + KB) / s) * dy * phi) * conj(Z)
+                    ).real();
+                default: return (
+                      ((-sgn * (FLUCS_FLOAT)2.0 / s) * dy * phi) * conj(Z)
+                    ).real();
+            }
+        }
+    }
+};
+
+struct ZPInvariantW_Functor {
+    const FLUCS_COMPLEX* __restrict__ fields_global;
+    const int which;
+    __device__ __forceinline__ FLUCS_FLOAT operator()(size_t index) const {
+        return ZPInvariant_Functor{fields_global, which, 0}(index);
+    }
+};
+
+// Dissipation of one invariant by one hyperdissipation component: 2 nu(k) W_k
+struct ZPInvariantDissipation_Functor {
+    const FLUCS_COMPLEX* __restrict__ fields_global;
+    const FLUCS_FLOAT adaptive_rate;
+    const int hyperdissipation_type;
+    const int which;
+    __device__ __forceinline__ FLUCS_FLOAT operator()(size_t index) const {
+        return (FLUCS_FLOAT)2.0
+            * HyperdissipationSelector_Functor<ZPInvariantW_Functor>{
+                ZPInvariantW_Functor{fields_global, which},
+                adaptive_rate,
+                hyperdissipation_type
+            }(index);
+    }
+};
+
+// Instantaneous nonlinear transfer into one invariant, from the nonlinear
+// RHS alone (d_t f|_NL = -N_f). absval = 1 returns |per-mode transfer|
+// (the gross transfer, a round-off reference scale).
+struct ZPInvariantNonlinear_Functor {
+    const FLUCS_COMPLEX* __restrict__ fields_global;
+    const FLUCS_FLOAT dt;
+    const double current_time;
+    const long long current_step;
+    const FLUCS_COMPLEX (* __restrict__ dft_bits_global)[HALFSIZE];
+    const int which;
+    const int absval;
+
+    __device__ __forceinline__ FLUCS_FLOAT operator()(size_t index) const {
+        FLUCS_COMPLEX nl[NUMBER_OF_FIELDS] = {0};
+#ifdef NONLINEAR
+        add_nonlinear_terms(index, dt, current_time, current_step,
+                            dft_bits_global, nl);
+#endif
+        const FLUCS_FLOAT kperp2 = zp_kperp2(index);
+        const FLUCS_FLOAT s = flucs_sqrt(C_DBPAR);
+        const FLUCS_FLOAT sgn = (which % 2 == 0) ? FLOAT_ONE : -FLOAT_ONE;
+        const FLUCS_COMPLEX phi = fields_global[index];
+        const FLUCS_COMPLEX psi = fields_global[index + HALFSIZE];
+        const FLUCS_COMPLEX dbpar = fields_global[index + 2*HALFSIZE];
+        const FLUCS_COMPLEX upar = fields_global[index + 3*HALFSIZE];
+        FLUCS_FLOAT t;
+        if (which < 2) {
+            t = -kperp2 * (conj(phi + sgn * psi) * (nl[0] + sgn * nl[1])).real();
+        } else {
+            t = -(conj(upar + sgn * s * dbpar) * (nl[3] + sgn * s * nl[2])).real();
+        }
+        return absval ? flucs_fabs(t) : t;
+    }
+};
+
 // <|f|^2>-type quantities. which: 0 dBpar^2, 1 |dB_perp|^2, 2 dB_y^2 (= (dxPsi)^2)
 struct ZPFieldSquare_Functor {
     const FLUCS_COMPLEX* __restrict__ fields_global;

@@ -32,12 +32,26 @@ class ZPinchEnergyDiag(FlucsDiagnostic):
     <dBpar^2>, <|dB_perp|^2>, <dB_y^2>, one-step finite-difference dE/dt and
     the budget residual dE/dt - (kP Qhat - D). Optionally the instantaneous
     nonlinear energy transfer (costs one extra nonlinear evaluation).
+
+    Option invariants = true adds, for each of the four nonlinear invariants
+    (curvy3d names; see zpinch_fourier.cu)
+        zplus = W_zeta+, zminus = W_zeta-, Zpplus = W_Z+, Zpminus = W_Z-,
+    the budget dW/dt = exch + inj - diss (+ nl, which vanishes):
+        <n>          W (box average; curvy3d saves W/2)
+        <n>_inj      injection (proportional to kP; sum over n / 2 = kP Qhat)
+        <n>_exch     linear curvature exchange (sums to 0 over n)
+        <n>_lin      exch + inj (= 2 x curvy3d's saved "<n>_inj")
+        <n>_diss     dissipation (= 2 x curvy3d's "<n>_diss")
+        <n>_dWdt, <n>_budget_error   one-step FD and residual
+        <n>_nl, <n>_nl_gross         (with save_nonlinear) instantaneous NL
+                                     transfer and sum_k |per-mode transfer|
     """
 
     name = "energy"
     system: ZPinchFourier
     option_defaults: ClassVar[dict[str, object]] = {
         "save_nonlinear": False,
+        "invariants": False,
     }
 
     get_E: Callable[..., cp.ndarray]
@@ -48,6 +62,7 @@ class ZPinchEnergyDiag(FlucsDiagnostic):
 
     energy_parts = ("E_uperp", "E_bperp", "E_dbpar", "E_upar")
     square_names = ("dbpar2", "dbperp2", "dby2")
+    invariant_names = ("zplus", "zminus", "Zpplus", "Zpminus")
 
     def init_vars(self) -> None:
         reductions = FourierReductions(self.system)
@@ -60,6 +75,12 @@ class ZPinchEnergyDiag(FlucsDiagnostic):
         names += [f"D_{c}" for c in self.system.hyperdissipation_components]
         if self.save_nonlinear:
             names.append("dEdt_nonlinear")
+        if self.invariants:
+            for n in self.invariant_names:
+                names += [n, f"{n}_inj", f"{n}_exch", f"{n}_lin", f"{n}_diss",
+                          f"{n}_dWdt", f"{n}_budget_error"]
+                if self.save_nonlinear:
+                    names += [f"{n}_nl", f"{n}_nl_gross"]
         for name in names:
             self.add_var(_scalar(name))
 
@@ -97,9 +118,65 @@ class ZPinchEnergyDiag(FlucsDiagnostic):
                 ),
                 complex_output=False,
             )
+        if self.invariants:
+            self.get_inv = reductions.get_reduction(
+                reduction_output="scalar",
+                functor="ZPInvariant_Functor",
+                input_args="FLUCS_COMPLEX*,int,int",
+                complex_output=False,
+            )
+            self.get_inv_D = reductions.get_reduction(
+                reduction_output="scalar",
+                functor="ZPInvariantDissipation_Functor",
+                input_args="FLUCS_COMPLEX*,FLUCS_FLOAT,int,int",
+                complex_output=False,
+            )
+            if self.save_nonlinear:
+                self.get_inv_NL = reductions.get_reduction(
+                    reduction_output="scalar",
+                    functor="ZPInvariantNonlinear_Functor",
+                    input_args=(
+                        "FLUCS_COMPLEX*,FLUCS_FLOAT,double,long long,"
+                        "const FLUCS_COMPLEX (*)[HALFSIZE],int,int"
+                    ),
+                    complex_output=False,
+                )
 
     def ready(self) -> None:
         pass
+
+    def _execute_invariants(self, fields, fields_prev, current_dt,
+                            adaptive_rate, nl_args) -> None:
+        system = self.system
+        for i, n in enumerate(self.invariant_names):
+            w = np.int32(i)
+            W = self.get_inv(fields, w, np.int32(0)).get().item()
+            inj = self.get_inv(fields, w, np.int32(1)).get().item()
+            exch = self.get_inv(fields, w, np.int32(2)).get().item()
+            diss = sum(
+                self.get_inv_D(fields, adaptive_rate, np.int32(j), w)
+                .get().item()
+                for j in range(len(system.hyperdissipation_components))
+            )
+            W_prev = self.get_inv(fields_prev, w, np.int32(0)).get().item()
+            dWdt = (W - W_prev) / current_dt
+            self.save_data(n, W)
+            self.save_data(f"{n}_inj", inj)
+            self.save_data(f"{n}_exch", exch)
+            self.save_data(f"{n}_lin", inj + exch)
+            self.save_data(f"{n}_diss", diss)
+            self.save_data(f"{n}_dWdt", dWdt)
+            self.save_data(f"{n}_budget_error", dWdt - (inj + exch - diss))
+            if self.save_nonlinear:
+                if nl_args is None:
+                    nl = gross = 0.0
+                else:
+                    nl = self.get_inv_NL(*nl_args, w, np.int32(0)).get().item()
+                    gross = self.get_inv_NL(
+                        *nl_args, w, np.int32(1)
+                    ).get().item()
+                self.save_data(f"{n}_nl", nl)
+                self.save_data(f"{n}_nl_gross", gross)
 
     def execute(self) -> None:
         system = self.system
@@ -140,6 +217,7 @@ class ZPinchEnergyDiag(FlucsDiagnostic):
         for i, name in enumerate(self.square_names):
             self.save_data(name, self.get_sq(fields, np.int32(i)).get().item())
 
+        nl_args = None
         if self.save_nonlinear:
             if system.input["setup.linear"]:
                 self.save_data("dEdt_nonlinear", 0.0)
@@ -147,13 +225,16 @@ class ZPinchEnergyDiag(FlucsDiagnostic):
                 system.compute_nonlinear_terms(
                     current_dt, current_time, current_step, fields, False
                 )
+                nl_args = (fields, current_dt, current_time, current_step,
+                           system.dft_bits)
                 self.save_data(
-                    "dEdt_nonlinear",
-                    self.get_NL(
-                        fields, current_dt, current_time, current_step,
-                        system.dft_bits,
-                    ).get().item(),
+                    "dEdt_nonlinear", self.get_NL(*nl_args).get().item()
                 )
+
+        if self.invariants:
+            self._execute_invariants(
+                fields, fields_prev, current_dt, adaptive_rate, nl_args
+            )
 
 
 class ZPinchEnergyDiag1D(FlucsDiagnostic):
