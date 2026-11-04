@@ -1,0 +1,22 @@
+[dimensions]
+Lx = 12.566370614359172
+Ly = 6.283185307179586
+Lz = 6.283185307179586
+
+[parameters]
+# Point A2 by default
+kb = 0.28284271
+kP = 2.2627417
+
+[timestepping]
+method = "ssprk3e"
+
+[time]
+max_cfl = 0.5
+
+[init]
+method = "white_noise"
+amplitude = 1e-5
+# for method = "single_mode": list of [kx, ky, kz] with ky >= 0
+modes = []
+eigenvector = true
