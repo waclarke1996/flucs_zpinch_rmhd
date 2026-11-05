@@ -20,3 +20,6 @@ amplitude = 1e-5
 # for method = "single_mode": list of [kx, ky, kz] with ky >= 0
 modes = []
 eigenvector = true
+# for method = "curvy3d_snapshot": curvy3d .nc file and snapshot index
+file = ""
+index = 0

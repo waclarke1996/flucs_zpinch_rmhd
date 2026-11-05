@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING, ClassVar
 import numpy as np
 
 from flucs import cupy as cp
+from flucs.utilities.messages import flucsprint
 from flucs.diagnostic import FlucsDiagnostic, FlucsDiagnosticVariable
 from flucs.solvers.fourier.fourier_system_reductions import FourierReductions
 
@@ -52,6 +53,9 @@ class ZPinchEnergyDiag(FlucsDiagnostic):
     option_defaults: ClassVar[dict[str, object]] = {
         "save_nonlinear": False,
         "invariants": False,
+        # Early stop (runaway detection); disabled when <= 0
+        "stop_q_over_qmhd": -1.0,
+        "stop_dt_min": -1.0,
     }
 
     get_E: Callable[..., cp.ndarray]
@@ -178,6 +182,19 @@ class ZPinchEnergyDiag(FlucsDiagnostic):
                 self.save_data(f"{n}_nl", nl)
                 self.save_data(f"{n}_nl_gross", gross)
 
+    def _check_stop(self, q_over_qmhd, dt, t) -> None:
+        """End the run (final_time := now) if a stop criterion is met."""
+        reason = None
+        qmax = float(self.stop_q_over_qmhd)
+        dtmin = float(self.stop_dt_min)
+        if qmax > 0 and not (abs(q_over_qmhd) <= qmax):
+            reason = f"|Q/Q_MHD| = {q_over_qmhd:.4e} > {qmax:g}"
+        elif dtmin > 0 and dt < dtmin and self.system.current_step > 0:
+            reason = f"dt = {dt:.4e} < {dtmin:g}"
+        if reason is not None:
+            flucsprint(f"Early stop at t = {t:.4f}: {reason}", source=self)
+            self.system.final_time = self.system.time_float(t)
+
     def execute(self) -> None:
         system = self.system
         current_dt = system.float(system.current_dt)
@@ -200,7 +217,9 @@ class ZPinchEnergyDiag(FlucsDiagnostic):
         self.save_data("Qhat_em", self.get_Q(fields, np.int32(1)).get().item())
         injection = system.kP * Q
         self.save_data("injection", injection)
-        self.save_data("Q_over_QMHD", Q / system.Ly**2 / system.Q_MHD)
+        q_over_qmhd = Q / system.Ly**2 / system.Q_MHD
+        self.save_data("Q_over_QMHD", q_over_qmhd)
+        self._check_stop(q_over_qmhd, float(current_dt), float(current_time))
 
         D = 0.0
         for i, c in enumerate(system.hyperdissipation_components):

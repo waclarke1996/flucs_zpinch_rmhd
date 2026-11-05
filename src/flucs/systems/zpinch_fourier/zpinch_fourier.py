@@ -146,6 +146,8 @@ class ZPinchFourier(FourierSystem):
         match method:
             case "single_mode":
                 self._init_single_mode()
+            case "curvy3d_snapshot":
+                self._init_curvy3d_snapshot()
             case "kx0_noise":
                 # Random phases, amplitude init.amplitude, only kx = 0 modes
                 mask = self.get_solved_grid_mask().astype(bool)
@@ -165,6 +167,57 @@ class ZPinchFourier(FourierSystem):
 
         # kperp = 0 modes are not evolved (as in curvy3d): zero them
         self.fields_initial[:, :, 0, 0] = 0
+
+    def _init_curvy3d_snapshot(self) -> None:
+        """
+        init.file = curvy3d .nc output, init.index = snapshot index.
+        curvy3d stores X_k of f = sum_k X_k exp(i k.x) (same as FLUCS) in the
+        compact unpadded layout (nz, nx, half_ny), fields (Phi, deltaBpar,
+        Psi, upar). Copied mode by mode into the padded FLUCS layout;
+        normalisation factor 1. The ky = 0 plane is Hermitian-projected
+        afterwards by FourierSystem._check_initial_conditions.
+        """
+        import netCDF4
+
+        path = self.input["init.file"]
+        it = int(self.input["init.index"])
+        names = ("Phi", "Psi", "deltaBpar", "upar")  # FLUCS field order
+        with netCDF4.Dataset(path, "r") as ds:
+            data = [
+                np.asarray(ds[f"{n}_rfft_r"][it], dtype=np.float64)
+                + 1j * np.asarray(ds[f"{n}_rfft_i"][it], dtype=np.float64)
+                for n in names
+            ]
+        nz_c, nx_c, hy_c = data[0].shape
+        solved = self.get_solved_grid_mask().astype(bool)
+        n_kz = int(np.count_nonzero(solved[:, 0, 1]))
+        n_kx = int(np.count_nonzero(solved[0, :, 1]))
+        n_ky = int(np.count_nonzero(solved[0, 1, :]))
+        if (nz_c, nx_c, hy_c) != (n_kz, n_kx, n_ky):
+            raise InvalidFlucsInputFileError(
+                f"curvy3d snapshot modes {(nz_c, nx_c, hy_c)} do not match "
+                f"the FLUCS solved modes {(n_kz, n_kx, n_ky)}."
+            )
+
+        def padded_index(n_c, n_pad):
+            i = np.arange(n_c)
+            return np.where(i < (n_c + 1) // 2, i, i + (n_pad - n_c))
+
+        iz = padded_index(nz_c, self.nz)
+        ix = padded_index(nx_c, self.nx)
+        self.fields_initial = np.zeros(
+            (self.number_of_fields, *self.half_tuple), dtype=self.complex
+        )
+        for f, X in enumerate(data):
+            self.fields_initial[f, iz[:, None, None], ix[None, :, None],
+                                np.arange(hy_c)[None, None, :]] = X
+        if np.any(self.fields_initial[:, ~solved]):
+            raise RuntimeError("curvy3d snapshot mapped onto unsolved modes.")
+        flucsprint(
+            f"Initialised from curvy3d snapshot {it} of {path}: "
+            f"max |X| = {max(np.abs(X).max() for X in data):.3e}",
+            source=self,
+        )
 
     def _mode_index(self, kx: float, ky: float, kz: float):
         """Array indices (ikz, ikx, iky) of a mode with ky >= 0."""
