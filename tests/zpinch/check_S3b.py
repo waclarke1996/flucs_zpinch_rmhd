@@ -29,7 +29,13 @@ def first_time(t, cond):
     return t[i[0]] if len(i) else np.nan
 
 
-rows, curves = [], {}
+def local_rate(t, y, dt_s=0.2):
+    """d ln y / dt by central difference over +-dt_s/2 (interpolated)."""
+    ly = np.log(np.maximum(y, 1e-300))
+    return (np.interp(t + dt_s / 2, t, ly) - np.interp(t - dt_s / 2, t, ly)) / dt_s
+
+
+rows, curves, extra = [], {}, []
 for case, (pt, mode, dims, nu, power) in CASES.items():
     kb, kP = POINTS[pt]
     kperp2 = mode[0] ** 2 + mode[1] ** 2
@@ -59,6 +65,18 @@ for case, (pt, mode, dims, nu, power) in CASES.items():
         sig_lin = fit_rate(tl, vl["E_kxn0"], *win)
         sig_lin_late = fit_rate(tl, vl["E_kxn0"], 15.0, tl[-1])
         e_kx0_win = np.interp(win[0], t, v["E_kx0"])
+        # local rate sigma(t) = d ln E_kxn0/dt over dt_s = 0.2 (NL), peak before t_b and at fixed E_kx0
+        lr = local_rate(t, v["E_kxn0"])
+        pre = (t >= 0.5) & (t <= t_b)
+        i_pk = np.flatnonzero(pre)[np.argmax(lr[pre])] if pre.any() else 0
+        sig_pk, E_pk = lr[i_pk], v["E_kx0"][i_pk]
+        sig_at = {}
+        for e_ref in (30.0, 100.0, 300.0):
+            j = first_time(np.arange(len(t)), (v["E_kx0"] >= e_ref) & (t <= t_b))
+            sig_at[e_ref] = lr[int(j)] if np.isfinite(j) else np.nan
+        lr_l = local_rate(tl, vl["E_kxn0"])
+        extra.append((name, sig_pk, t[i_pk], E_pk, sig_pk / np.sqrt(E_pk), sig_at,
+                      np.interp(t[i_pk], tl, lr_l)))
         f0 = [v[f"f_kx0_{p}"][0] for p in PARTS]
         rows.append((name, gam_nl, gam_lin, g_th, sig_nl, sig_lin, sig_lin_late, win, e_kx0_win,
                      t10, t_eq, t_end, f0, v["dt"][-1]))
@@ -70,6 +88,11 @@ for (name, gnl, gl, gth, snl, sl, sll, win, ek, t10, teq, tend, f0, dte) in rows
     print(f"{name:9s} {gnl:8.5f} {gl:8.5f} {gth:8.5f} | {snl:7.3f} {sl:7.3f} {sll:8.3f} "
           f"{win[0]:5.1f}-{win[1]:<5.1f} {ek:8.2e} | {t10:6.2f} {teq:6.2f} {tend:6.2f} {dte:8.1e} | "
           + " ".join(f"{x:.3f}" for x in f0))
+
+print("\nLocal secondary rate sigma(t) = d ln E_kxn0/dt (NL); peak before t10% (or end), and at E_kx0 = 30/100/300")
+print(f"{'run':9s} {'sig_pk':>7s} {'t_pk':>6s} {'E_kx0_pk':>9s} {'sig/sqrtE':>9s} | {'s@30':>6s} {'s@100':>6s} {'s@300':>6s} | lin@t_pk")
+for (name, spk, tpk, epk, sr, sat, slin) in extra:
+    print(f"{name:9s} {spk:7.2f} {tpk:6.2f} {epk:9.2e} {sr:9.3f} | {sat[30.0]:6.2f} {sat[100.0]:6.2f} {sat[300.0]:6.2f} | {slin:6.2f}")
 
 try:
     import matplotlib
