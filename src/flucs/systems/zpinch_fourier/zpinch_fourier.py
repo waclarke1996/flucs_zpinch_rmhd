@@ -144,6 +144,28 @@ class ZPinchFourier(FourierSystem):
 
         method = self.input["init.method"]
         match method:
+            case "white_noise":
+                # Plugin white noise (the core version draws phases on
+                # [0, pi) only; see NOTES_flucs.md). Old: "white_noise_core".
+                self.fields_initial = self._white_noise(
+                    self.input["init.amplitude"], self.input["init.rand_seed"]
+                )
+            case "white_noise_core":
+                # Copy of the FLUCS core white_noise (fourier_system.py),
+                # phases exp(i pi U[0,1)), kept to reproduce Stage 3 runs.
+                mask = self.get_solved_grid_mask().astype(bool)
+                np.random.seed(self.input["init.rand_seed"])
+                solved = np.random.random(
+                    (self.number_of_fields, np.count_nonzero(mask))
+                ).astype(dtype=self.complex)
+                self.fields_initial = np.zeros(
+                    (self.number_of_fields, *self.half_tuple), dtype=self.complex
+                )
+                self.fields_initial[:, mask] = (
+                    self.input["init.amplitude"] * np.exp(1j * np.pi * solved)
+                )
+            case "streamer":
+                self._init_streamer()
             case "single_mode":
                 self._init_single_mode()
             case "curvy3d_snapshot":
@@ -216,6 +238,91 @@ class ZPinchFourier(FourierSystem):
         flucsprint(
             f"Initialised from curvy3d snapshot {it} of {path}: "
             f"max |X| = {max(np.abs(X).max() for X in data):.3e}",
+            source=self,
+        )
+
+    def _white_noise(self, amplitude: float, seed: int) -> np.ndarray:
+        """
+        |X_k| = amplitude, phase uniform on [0, 2 pi), on every solved mode
+        of every field (as curvy3d: 1e-5 per mode). The ky = 0 plane is made
+        exactly Hermitian (one phase per (k, -k) pair, partner = conj), so
+        the core's 0.5 (f + conj f) projection leaves it unchanged.
+        kperp = 0 modes are zeroed by the caller.
+        """
+        mask = self.get_solved_grid_mask().astype(bool)
+        rng = np.random.default_rng(seed)
+        phases = rng.uniform(
+            0.0, 2.0 * np.pi, (self.number_of_fields, *self.half_tuple)
+        )
+        fields = np.zeros(
+            (self.number_of_fields, *self.half_tuple), dtype=self.complex
+        )
+        fields[:] = amplitude * np.exp(1j * phases)
+        # ky = 0: set the partner (-kz, -kx) of each mode to its conjugate,
+        # keeping the member with the "positive" (kz, kx) index ordering.
+        ikz = np.arange(self.nz)[:, None]
+        ikx = np.arange(self.nx)[None, :]
+        cikz, cikx = (-ikz) % self.nz, (-ikx) % self.nx
+        lin = ikz * self.nx + ikx
+        clin = cikz * self.nx + cikx
+        partner = np.conj(fields[:, cikz, cikx, 0])
+        ky0 = fields[:, :, :, 0]
+        ky0[:] = np.where((lin > clin)[None], partner, ky0)
+        fields[:, ~mask] = 0
+        return fields
+
+    def _box_energy(self, fields: np.ndarray) -> float:
+        """Box-averaged E of half-plane fields (same as ZPEnergy_Functor)."""
+        kz_b, kx_b, ky_b = self.get_broadcast_wavenumbers()
+        kperp2 = kx_b**2 + ky_b**2
+        weight = np.where(np.arange(self.half_ny) == 0, 1.0, 2.0)
+        weight = weight[None, None, :] * self.get_solved_grid_mask()
+        e = 0.5 * (
+            kperp2 * (np.abs(fields[0]) ** 2 + np.abs(fields[1]) ** 2)
+            + self.c_dbpar * np.abs(fields[2]) ** 2
+            + np.abs(fields[3]) ** 2
+        )
+        return float(np.sum(weight * e))
+
+    def _init_streamer(self) -> None:
+        """
+        One linear eigenmode (fastest root) at init.modes = [[kx, ky, kz]]
+        with box energy init.energy, plus plugin white noise with total box
+        energy init.noise_energy (seed init.rand_seed).
+        """
+        modes = self.input["init.modes"]
+        if len(modes) != 1:
+            raise InvalidFlucsInputFileError(
+                "init.method = 'streamer' needs exactly one mode in init.modes."
+            )
+        kx, ky, kz = modes[0]
+        ikz, ikx, iky = self._mode_index(kx, ky, kz)
+        L = self.compute_physical_linear_operator()
+        vals, vecs = np.linalg.eig(L[:, :, ikz, ikx, iky])
+        v = vecs[:, np.argmax(vals.real)]
+        mode = np.zeros(
+            (self.number_of_fields, *self.half_tuple), dtype=self.complex
+        )
+        mode[:, ikz, ikx, iky] = v
+        if iky == 0:
+            mode[:, (-ikz) % self.nz, (-ikx) % self.nx, 0] = np.conj(v)
+        mode[:, :, 0, 0] = 0
+        e_mode = self._box_energy(mode)
+        if e_mode == 0:
+            raise InvalidFlucsInputFileError("Streamer mode has zero energy.")
+        mode *= np.sqrt(float(self.input["init.energy"]) / e_mode)
+
+        noise = self._white_noise(1.0, self.input["init.rand_seed"])
+        noise[:, :, 0, 0] = 0
+        noise *= np.sqrt(
+            float(self.input["init.noise_energy"]) / self._box_energy(noise)
+        )
+        self.fields_initial = mode + noise
+        flucsprint(
+            f"Streamer ({kx}, {ky}, {kz}): growth rate {vals.real.max():.6f},"
+            f" E_mode = {self._box_energy(mode):.6e},"
+            f" E_noise = {self._box_energy(noise):.6e},"
+            f" E_box = {self._box_energy(self.fields_initial):.16e}",
             source=self,
         )
 

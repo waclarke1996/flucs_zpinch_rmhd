@@ -20,6 +20,9 @@ amplitude = 1e-5
 # for method = "single_mode": list of [kx, ky, kz] with ky >= 0
 modes = []
 eigenvector = true
+# for method = "streamer": box energy of the eigenmode and of the white noise
+energy = 1.0
+noise_energy = 1e-6
 # for method = "curvy3d_snapshot": curvy3d .nc file and snapshot index
 file = ""
 index = 0

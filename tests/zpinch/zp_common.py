@@ -50,14 +50,15 @@ def write_input(run_dir, *, kb, kP, n=32, linear=False, nu=None, power=2,
                 dt_max=0.01, tfinal=1.0, max_cfl=0.5, method="ssprk3e",
                 init=None, save_steps=1, energy_opts=None, locations=None,
                 loc_steps=1, dt_mult_increase=None,
-                restart=None):
+                restart=None, dims=None):
     run_dir = pl.Path(run_dir)
+    nx, ny, nz = dims or (n, n, n)
     run_dir.mkdir(parents=True, exist_ok=True)
     init = init or {"method": "white_noise", "amplitude": 1e-2, "rand_seed": 257}
     lines = [
         "[setup]", 'system = "ZPinchFourier"', 'solver = "FourierSolver"',
         'precision = "double"', f"linear = {str(linear).lower()}", "",
-        "[dimensions]", f"nx = {n}", f"ny = {n}", f"nz = {n}", "",
+        "[dimensions]", f"nx = {nx}", f"ny = {ny}", f"nz = {nz}", "",
         "[parameters]", f"kb = {kb!r}", f"kP = {kP!r}", "",
         "[timestepping]", f'method = "{method}"', "",
         "[time]", f"dt_max = {dt_max!r}", f"tfinal = {tfinal!r}",
@@ -112,6 +113,7 @@ def read0d(run_dir):
     e = g["energy"]
     v = {k: np.asarray(e[k][:], dtype=float) for k in e.variables}
     v["t"] = np.asarray(g["time"][:], dtype=float)
+    v.setdefault("dt", np.asarray(g["dt"][:], dtype=float))
     return v
 
 

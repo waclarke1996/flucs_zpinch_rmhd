@@ -56,7 +56,15 @@ class ZPinchEnergyDiag(FlucsDiagnostic):
         # Early stop (runaway detection); disabled when <= 0
         "stop_q_over_qmhd": -1.0,
         "stop_dt_min": -1.0,
+        # The two criteria above must hold continuously for longer than this
+        # time before stopping (0: stop at once)
+        "stop_persist_time": 0.0,
+        # Energy in kx = 0 / kx != 0 / kz = 0 modes, kx = 0 parts, fractions
+        "kx_split": True,
+        # Stop when E(kx != 0) > value * E(kx = 0); disabled when <= 0
+        "stop_kxn0_over_kx0": -1.0,
     }
+    kx0_parts = ("uperp", "bperp", "dbpar", "upar")
 
     get_E: Callable[..., cp.ndarray]
     get_Q: Callable[..., cp.ndarray]
@@ -85,6 +93,17 @@ class ZPinchEnergyDiag(FlucsDiagnostic):
                           f"{n}_dWdt", f"{n}_budget_error"]
                 if self.save_nonlinear:
                     names += [f"{n}_nl", f"{n}_nl_gross"]
+        if self.kx_split:
+            names += ["E_kx0", "E_kxn0", "E_kz0"]
+            names += [f"E_kx0_{p}" for p in self.kx0_parts]
+            names += [f"f_kx0_{p}" for p in self.kx0_parts]
+            self.get_Esel = reductions.get_reduction(
+                reduction_output="scalar",
+                functor="ZPEnergySel_Functor",
+                input_args="FLUCS_COMPLEX*,int,int",
+                complex_output=False,
+            )
+        self._stop_since = None
         for name in names:
             self.add_var(_scalar(name))
 
@@ -191,9 +210,42 @@ class ZPinchEnergyDiag(FlucsDiagnostic):
             reason = f"|Q/Q_MHD| = {q_over_qmhd:.4e} > {qmax:g}"
         elif dtmin > 0 and dt < dtmin and self.system.current_step > 0:
             reason = f"dt = {dt:.4e} < {dtmin:g}"
-        if reason is not None:
-            flucsprint(f"Early stop at t = {t:.4f}: {reason}", source=self)
-            self.system.final_time = self.system.time_float(t)
+        persist = float(self.stop_persist_time)
+        if reason is None:
+            self._stop_since = None
+            return
+        if persist > 0:
+            if self._stop_since is None:
+                self._stop_since = t
+                flucsprint(f"Stop criterion met at t = {t:.4f}: {reason}",
+                           source=self)
+            if t - self._stop_since <= persist:
+                return
+            reason += f" (continuously since t = {self._stop_since:.4f})"
+        self._request_stop(t, reason)
+
+    def _request_stop(self, t, reason) -> None:
+        flucsprint(f"Early stop at t = {t:.4f}: {reason}", source=self)
+        self.system.final_time = self.system.time_float(t)
+
+    def _execute_kx_split(self, fields, t) -> None:
+        minus_one = np.int32(-1)
+        e = {}
+        for sel, name in enumerate(("E_kx0", "E_kxn0", "E_kz0")):
+            e[name] = self.get_Esel(fields, minus_one, np.int32(sel)).get().item()
+            self.save_data(name, e[name])
+        for i, p in enumerate(self.kx0_parts):
+            ep = self.get_Esel(fields, np.int32(i), np.int32(0)).get().item()
+            self.save_data(f"E_kx0_{p}", ep)
+            self.save_data(
+                f"f_kx0_{p}", ep / e["E_kx0"] if e["E_kx0"] > 0 else np.nan
+            )
+        ratio = float(self.stop_kxn0_over_kx0)
+        if ratio > 0 and e["E_kxn0"] > ratio * e["E_kx0"]:
+            self._request_stop(
+                t, f"E(kx != 0) = {e['E_kxn0']:.4e} > {ratio:g} x "
+                f"E(kx = 0) = {e['E_kx0']:.4e}"
+            )
 
     def execute(self) -> None:
         system = self.system
@@ -235,6 +287,9 @@ class ZPinchEnergyDiag(FlucsDiagnostic):
 
         for i, name in enumerate(self.square_names):
             self.save_data(name, self.get_sq(fields, np.int32(i)).get().item())
+
+        if self.kx_split:
+            self._execute_kx_split(fields, float(current_time))
 
         nl_args = None
         if self.save_nonlinear:

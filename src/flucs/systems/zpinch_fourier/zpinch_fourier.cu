@@ -255,6 +255,25 @@ struct ZPEnergy_Functor {
     }
 };
 
+// Energy (part as in ZPEnergy_Functor) restricted to a set of modes:
+// sel 0: kx = 0, 1: kx != 0, 2: kz = 0
+struct ZPEnergySel_Functor {
+    const FLUCS_COMPLEX* __restrict__ fields_global;
+    const int part;
+    const int sel;
+    __device__ __forceinline__ FLUCS_FLOAT operator()(size_t index) const {
+        indices3d_t indices = get_indices3d<NZ, NX, HALF_NY>(index);
+        bool keep;
+        switch (sel) {
+            case 0: keep = (indices.ikx == 0); break;
+            case 1: keep = (indices.ikx != 0); break;
+            default: keep = (indices.ikz == 0);
+        }
+        return keep ? ZPEnergy_Functor{fields_global, part}(index)
+                    : (FLUCS_FLOAT)0;
+    }
+};
+
 struct ZPEnergyTotal_Functor {
     const FLUCS_COMPLEX* __restrict__ fields_global;
     __device__ __forceinline__ FLUCS_FLOAT operator()(size_t index) const {
