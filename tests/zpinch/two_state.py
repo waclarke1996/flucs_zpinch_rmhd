@@ -41,6 +41,8 @@ RUNS = {   # name: list of (kind, path, time offset)
     "C:A3a-YHR2": [("c", "A3a-YHR2", 0.0)],
     "F:A3a-Y-k8-S30+S30c": [("f", f"{R}/stage3/A3a-Y-k8-S30/output.0d.nc", 0.0),
                             ("f", f"{R}/stage3/A3a-Y-k8-S30c/output.0d.nc", 0.0)],
+    **{f"F:{r}": [("f", f"{R}/stage3c/{r}/t{s:04d}/output.0d.nc", 300.0) for s in range(350, 601, 50)]
+       for r in ("A3a-Y-k8-C300", "A3a-Y-k8-C300-cfl025")},
 }
 
 
