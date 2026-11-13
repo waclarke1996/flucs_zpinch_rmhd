@@ -44,6 +44,7 @@ RUNS = {   # name: list of (kind, path, time offset)
     **{f"F:{r}": [("f", f"{R}/stage3c/{r}/t{s:04d}/output.0d.nc", 300.0) for s in range(350, 601, 50)]
        for r in ("A3a-Y-k8-C300", "A3a-Y-k8-C300-cfl025")},
     "F:A3a-Z-k8-C300": [("f", f"{R}/stage3d/A3a-Z-k8-C300/t{s:04d}/output.0d.nc", 300.0) for s in range(350, 1001, 50)],
+    "F:A3a-T2-k8": [("f", f"{R}/stage3e/A3a-T2-k8/t{s:04d}/output.0d.nc", 0.0) for s in range(50, 1201, 50)],   # Stage 3e E2
 }
 OUT = sys.argv[1] if len(sys.argv) > 1 else "stage3c"   # output folder under runs/ (Stage 3d: stage3d)
 
@@ -153,12 +154,17 @@ def main():
     for name, pieces in RUNS.items():
         ps, notes = [], []
         for kind, p, off in pieces:
+            if kind == "f" and not os.path.exists(p):   # segment not run (yet)
+                continue
             if kind == "c":
                 t, q, E, fE, ts = curvy_piece(p, off)
                 notes.append(f"{p}: E-series factor (snapshot t={ts:g}) {fE:.6f}")
                 ps.append((t, q, E * fE, None))
             else:
                 ps.append(tuple(flucs_piece(p, off)))
+        if not ps:
+            print(f"{name:22s} no data")
+            continue
         t, q, E, kx = concat(ps)
         tg = np.arange(np.ceil(max(t[0], T0) / DT) * DT, t[-1] + 1e-9, DT)
         ok = np.isfinite(q) & np.isfinite(E)
@@ -166,6 +172,9 @@ def main():
         fk = None if kx is None else np.interp(tg, t[ok], kx[ok] / E[ok], left=np.nan)
         if fk is not None:
             fk[tg < t[ok][np.isfinite(kx[ok])][0]] = np.nan
+        if len(tg) < 100:
+            print(f"{name:22s} too short after T0 = {T0} (t_end {t[-1]:.1f})")
+            continue
         lab, eps = classify(tg, qg, QH, QL)
         print(stats(name, tg, qg, Eg, lab, eps, fk))
         labE, epsE = classify(tg, Eg, EH, EL)

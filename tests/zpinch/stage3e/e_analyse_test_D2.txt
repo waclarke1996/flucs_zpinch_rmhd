@@ -1,0 +1,34 @@
+== A3a-Z-k8-C300: kb 1.13137085 kP 1.13137085; padded 256 x 128 x 512; L 12.566 6.283 6.283; nu_perp 4.44089e-12 (p 4), nu_z 8.7e-16 (q 4)
+segments 14/14, t 300.0-1000.0; 2756386 steps, wall 15.83 h (20.7 ms/step); min dt 7.64e-05; EARLY_STOP: none
+t >= 350: <Q/Q_MHD> 2.105 +- 0.358 (tau_int 12.5), median 1.753, <E> 603, <E_kx0/E> 0.450
+two-state: run t-range f_high T_H T_L f_cls Q_H Q_L E_H E_L kx0/E(H L) switches episodes
+A3a-Z-k8-C300            350- 1000   0.63    395    232  0.96   3.09  0.51     870    170  0.53  0.32   7  H>32 L64 H71 L16 H198 L105 H93 L>47
+
+states (direct; k_perp,max 42.0, k_z,max 170; outer third = beyond 2/3 of these; pile = max e(k)/min e(k'<k), e = energy PER MODE in shells of width 2 (k_perp) / 4 (k_z) in the outer third; > 1 = rising)
+     t st      E  b_rms kx0/E ky0/E ky0kz0/E S_zon0  Eout_perp  Eout_z  pile_perp pile_z
+   350 H     526  17.25 0.472 0.071   0.0020  0.493   6.04e-03 2.37e-03      0.76   0.76
+   400 L      82   6.67 0.253 0.111   0.0110  0.534   1.32e-02 8.82e-04      0.74   0.73
+   450 H     408  15.26 0.496 0.071   0.0032  0.464   5.52e-03 1.19e-03      0.76   0.74
+   500 H     451  15.58 0.486 0.059   0.0024  0.453   6.02e-03 1.93e-03      0.77   0.77
+   550 H     919  22.06 0.565 0.041   0.0021  0.895   3.41e-03 1.62e-03      0.76   0.76
+   600 H     604  17.85 0.647 0.044   0.0016  0.317   4.41e-03 1.43e-03      0.76   0.75
+   650 H    1407  29.69 0.489 0.075   0.0020  0.813   4.42e-03 3.52e-03      0.77   0.78
+   700 H    1245  25.87 0.593 0.054   0.0016  0.401   4.40e-03 2.60e-03      0.77   0.78
+   750 L     120   8.18 0.215 0.096   0.0163  0.655   1.31e-02 1.24e-03      0.75   0.74
+   800 L     151  10.63 0.381 0.074   0.0076  0.472   7.90e-03 9.66e-04      0.75   0.73
+   850 H     711  19.78 0.613 0.031   0.0016  0.474   3.45e-03 1.70e-03      0.76   0.76
+   900 H    1120  25.83 0.519 0.048   0.0021  0.887   3.25e-03 1.67e-03      0.76   0.75
+   950 -     456  16.47 0.585 0.050   0.0013  0.405   6.18e-03 1.45e-03      0.78   0.75
+  1000 -     101   7.48 0.228 0.138   0.0190  0.742   1.25e-02 1.12e-03      0.75   0.74
+
+pass/fail per state (runaway: pass); criteria: kz_rms(k_d) < 0.8 k_z,max/sqrt3; E_out < 0.01 and pile <= 1 (both dirs); D_out < 0.5 (warn); k_perp(kz_rms=k_z*) >= k_perp,cut
+st  n  b_rms  E kx0/E ky0/E | kz_rms(k_d)/limit   | E_out p/z (pile p/z)      | D_out p/z  | f_par | k_cut k_tilt k(kz*) | kz,max need
+H   9  21.02   821 0.54 0.055 |  58.4/ 78.5 pass | 4.5e-03/2.0e-03 (0.77/0.78) pass | 0.29/0.49 ok | 0.81 |  25.2   8.6   inf pass | 170 356
+L   3   8.49   118 0.28 0.094 |  56.7/ 78.5 pass | 1.1e-02/1.0e-03 (0.75/0.74) FAIL | 0.61/0.25 warn | 0.48 |  25.2  19.3   inf pass | 170 159
+-   2  11.97   278 0.41 0.094 |  57.1/ 78.5 pass | 9.4e-03/1.3e-03 (0.78/0.75) pass | 0.46/0.34 ok | 0.63 |  25.2  12.0   inf pass | 170 255
+   dmap H_350: b 17.30 f_par 0.76 D_out 0.35/0.47 k_d 20.4 kz_rms(k_d) 59 k_cut 25.2 k_tilt 9.8 k_z* 73.2 k(kz*) inf
+   dmap L_400: b 6.67 f_par 0.43 D_out 0.65/0.21 k_d 32.7 kz_rms(k_d) 56 k_cut 25.2 k_tilt 19.6 k_z* 73.2 k(kz*) inf
+   dmap H_450-700: b 21.70 f_par 0.82 D_out 0.28/0.50 k_d 16.5 kz_rms(k_d) 58 k_cut 25.2 k_tilt 8.3 k_z* 73.2 k(kz*) inf
+   dmap L_750-800: b 9.49 f_par 0.51 D_out 0.58/0.27 k_d 31.2 kz_rms(k_d) 57 k_cut 25.2 k_tilt 19.2 k_z* 73.2 k(kz*) inf
+   dmap H_850-900: b 23.00 f_par 0.81 D_out 0.29/0.48 k_d 17.3 kz_rms(k_d) 59 k_cut 25.2 k_tilt 9.0 k_z* 73.2 k(kz*) inf
+   dmap -_950-1000: b 12.80 f_par 0.63 D_out 0.46/0.34 k_d 26.0 kz_rms(k_d) 57 k_cut 25.2 k_tilt 12.0 k_z* 73.2 k(kz*) inf
