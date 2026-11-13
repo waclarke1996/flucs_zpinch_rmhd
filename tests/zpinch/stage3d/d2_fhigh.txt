@@ -1,0 +1,5 @@
+C:A3a-Y+Yc2        t 100-1500 f_high 0.54  200-windows (step 100): 0.46 0.03 0.09 0.18 0.52 0.59 0.57 0.83 0.92 0.85 0.77 0.58 0.44 [min 0.03 max 0.92]  complete episodes H n14 mean 44 L n14 mean 41  <Q> 2.22 <E> 653
+C:A3a-Z            t 100-300 f_high 0.18  200-windows (step 100): 0.18 [min 0.18 max 0.18]  complete episodes H n1 mean 6 L n2 mean 71  <Q> 0.95 <E> 291
+C:A3a-YP4          t 100-500 f_high 0.51  200-windows (step 100): 0.28 0.35 0.75 [min 0.28 max 0.75]  complete episodes H n1 mean 128 L n2 mean 94  <Q> 2.70 <E> 788
+C:A3a-YHR2         t 100-500 f_high 0.34  200-windows (step 100): 0.55 0.34 0.12 [min 0.12 max 0.55]  complete episodes H n2 mean 56 L n2 mean 97  <Q> 1.54 <E> 450
+F:A3a-Z-k8-C300    t 300-1000 f_high 0.64  200-windows (step 100): 0.61 0.67 0.92 0.70 0.47 0.50 [min 0.47 max 0.92]  complete episodes H n4 mean 100 L n4 mean 48  <Q> 2.11 <E> 606

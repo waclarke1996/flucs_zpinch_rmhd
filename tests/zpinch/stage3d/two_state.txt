@@ -1,0 +1,21 @@
+T0 = 100.0, running median W = 5.0, sustained >= 5.0; Q thresholds high > 1.5, low < 0.8
+run                    t range     f_high    T_H    T_L f_cls    Q_H   Q_L     E_H    E_L kx0/E H L    sw  episodes (state, length; '>' = cut)
+C:A3a-Y+Yc2              100- 1500   0.54    701    606  0.93   3.89  0.47    1120    157              29  H>90 L143 H6 L112 H11 L75 H23 L38 H95 L6 H5 L21 H7 L41 H53 L7 H51 L6 H92 L8 H68 L20 H51 L9 H7 L12 H99 L69 H42 L>38
+C:A3a-YP4                100-  500   0.51    194    188  0.95   5.04  0.40    1456    133               4  H>55 L171 H128 L16 H>10
+C:A3a-Z                  100-  300   0.18     32    142  0.87   2.99  0.45     837    151               4  H7 L48 H6 L95 H>19
+C:A3a-YHR2               100-  500   0.34    129    249  0.94   3.60  0.51    1014    167               5  L>55 H107 L156 H5 L37 H>16
+F:A3a-Y-k8-S30+S30c      100-  500   0.83    314     67  0.95   3.47  0.38     993    124  0.58  0.29   3  L>26 H48 L40 H>266
+F:A3a-Y-k8-C300          300-  600   0.30     80    189  0.90   2.81  0.44     795    144  0.55  0.29   6  L101 H57 L19 H16 L48 H7 L>22
+F:A3a-Y-k8-C300-cfl025   300-  600   0.33     92    188  0.93   3.72  0.40    1053    135  0.58  0.29   4  L72 H67 L57 H25 L>60
+F:A3a-Z-k8-C300          300- 1000   0.64    425    239  0.95   3.09  0.52     869    171  0.53  0.32   9  H>26 L7 H37 L64 H71 L16 H198 L105 H93 L>47
+
+Cross-check: classified by E (high > 400, low < 250)
+run                    t range     f_high    T_H    T_L f_cls    Q_H   Q_L     E_H    E_L kx0/E H L    sw  episodes (state, length; '>' = cut)
+C:A3a-Y+Yc2              100- 1500   0.56    734    582  0.94   3.77  0.46    1091    149              29  H>91 L143 H13 L111 H12 L63 H24 L37 H95 L6 H6 L12 H19 L41 H53 L6 H51 L6 H93 L7 H68 L20 H54 L9 H8 L12 H100 L68 H45 L>37   agree(Q,E) 0.999   [A3a-Y: E-series factor (snapshot t=500) 2.000000; A3a-Yc2: E-series factor (snapshot t=1500) 2.000000]
+C:A3a-YP4                100-  500   0.53    208    187  0.99   4.81  0.40    1392    131               4  H>58 L171 H129 L16 H>21   agree(Q,E) 1.000   [A3a-YP4: E-series factor (snapshot t=500) 2.000000]
+C:A3a-Z                  100-  300   0.22     40    142  0.91   2.65  0.45     770    149               4  H>13 L47 H8 L94 H>18   agree(Q,E) 1.000   [A3a-Z: E-series factor (snapshot t=300) 2.000000]
+C:A3a-YHR2               100-  500   0.36    137    241  0.94   3.49  0.48     988    156               7  L>26 H5 L22 H109 L156 H6 L36 H>16   agree(Q,E) 0.986   [A3a-YHR2: E-series factor (snapshot t=500) 2.000000]
+F:A3a-Y-k8-S30+S30c      100-  500   0.83    323     66  0.97   3.42  0.38     979    123  0.58  0.30   3  L>27 H50 L40 H>274   agree(Q,E) 1.000
+F:A3a-Y-k8-C300          300-  600   0.34     95    187  0.94   2.59  0.44     745    142  0.54  0.30   6  L100 H70 L19 H18 L47 H8 L>21   agree(Q,E) 0.998
+F:A3a-Y-k8-C300-cfl025   300-  600   0.34     94    187  0.94   3.65  0.40    1036    134  0.58  0.29   4  L72 H67 L56 H27 L>59   agree(Q,E) 1.000
+F:A3a-Z-k8-C300          300- 1000   0.69    464    212  0.97   2.92  0.46     828    150  0.52  0.31   9  H>27 L6 H47 L64 H290 L68 H6 L28 H94 L>46   agree(Q,E) 0.967

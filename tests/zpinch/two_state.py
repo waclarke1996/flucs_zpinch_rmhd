@@ -43,7 +43,9 @@ RUNS = {   # name: list of (kind, path, time offset)
                             ("f", f"{R}/stage3/A3a-Y-k8-S30c/output.0d.nc", 0.0)],
     **{f"F:{r}": [("f", f"{R}/stage3c/{r}/t{s:04d}/output.0d.nc", 300.0) for s in range(350, 601, 50)]
        for r in ("A3a-Y-k8-C300", "A3a-Y-k8-C300-cfl025")},
+    "F:A3a-Z-k8-C300": [("f", f"{R}/stage3d/A3a-Z-k8-C300/t{s:04d}/output.0d.nc", 300.0) for s in range(350, 1001, 50)],
 }
+OUT = sys.argv[1] if len(sys.argv) > 1 else "stage3c"   # output folder under runs/ (Stage 3d: stage3d)
 
 
 def curvy_piece(rid, off):
@@ -176,7 +178,7 @@ def main():
     print(hdr)
     for s in lines_e:
         print(s)
-    np.savez_compressed(os.path.join(R, "stage3c", "two_state_series.npz"),
+    np.savez_compressed(os.path.join(R, OUT, "two_state_series.npz"),
                         **{f"{k}|{v}": a for k, arrs in store.items() for v, a in zip("tqEl", arrs)})
     try:
         import matplotlib
@@ -192,7 +194,7 @@ def main():
             a.set_ylim(0.05, 30); a.set_ylabel("Q/Q_MHD"); a.set_title(k, fontsize=9, loc="left")
         ax[-1].set_xlabel("t (R/vA)")
         fig.tight_layout()
-        fig.savefig(os.path.join(R, "stage3c", "two_state.png"), dpi=110)
+        fig.savefig(os.path.join(R, OUT, "two_state.png"), dpi=110)
     except Exception as ex:  # plotting is optional
         print("plot failed:", ex)
 
