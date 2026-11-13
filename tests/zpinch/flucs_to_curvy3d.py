@@ -136,6 +136,9 @@ def main():
         "padded_nx": d["nx"], "padded_ny": d["ny"], "padded_nz": d["nz"],
         "perpvisc": h["kperp"], "perpvisc_power": h["kperp_power"],
         "parvisc": h["kz"], "parvisc_power": h["kz_power"],
+        # box (Stage 3d): FLUCS zpinch default Lx = 4pi, Ly = Lz = 2pi; curvy3d sets Lx = Lx_mult * Ly
+        "Ly": float(d.get("Ly", 2 * np.pi)), "Lz": float(d.get("Lz", 2 * np.pi)),
+        "Lx_mult": float(d.get("Lx", 4 * np.pi)) / float(d.get("Ly", 2 * np.pi)),
         "save_time": a.save_time, "save_time_hf": a.save_time_hf, "tfinal": (nt - 1) * a.save_time,
         "extra_comment": a.run_id,
     }
