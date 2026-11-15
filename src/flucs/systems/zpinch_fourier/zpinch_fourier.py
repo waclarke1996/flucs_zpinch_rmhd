@@ -22,6 +22,8 @@ from flucs.utilities.cupy import KernelWrapper
 from flucs.utilities.messages import flucsprint
 
 from .zpinch_fourier_diagnostics import ZPinchEnergyDiag, ZPinchEnergyDiag1D
+from .zpinch_output import build_outputs
+from .zpinch_runtime_diags import ZP_RUNTIME_DIAGS
 
 
 class ZPinchFourier(FourierSystem):
@@ -37,6 +39,7 @@ class ZPinchFourier(FourierSystem):
     diags: ClassVar[set[type[FlucsDiagnostic]]] = {
         ZPinchEnergyDiag,
         ZPinchEnergyDiag1D,
+        *ZP_RUNTIME_DIAGS,
     }
 
     # Physical parameters
@@ -376,6 +379,23 @@ class ZPinchFourier(FourierSystem):
                 # Reality condition for ky = 0
                 self.fields_initial[:, (-ikz) % self.nz, (-ikx) % self.nx, 0] \
                     = np.conj(v)
+
+    # ------------------------------------------------------------------
+    # Outputs (Stage 4a: [output.<name>] save_time > 0 -> time-based output)
+    # ------------------------------------------------------------------
+
+    def setup_output(self) -> None:
+        build_outputs(self)
+
+    def finish_time_step(self) -> None:
+        super().finish_time_step()
+        # running max CFL / min dt between zp_scalars records (diagnostic)
+        cfl = float(self.current_cfl)
+        if cfl > getattr(self, "_zp_cfl_max", 0.0):
+            self._zp_cfl_max = cfl
+        dt = float(self.current_dt)
+        if dt < getattr(self, "_zp_dt_min", np.inf):
+            self._zp_dt_min = dt
 
     # ------------------------------------------------------------------
     # Time stepping

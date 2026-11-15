@@ -26,3 +26,61 @@ noise_energy = 1e-6
 # for method = "curvy3d_snapshot": curvy3d .nc file and snapshot index
 file = ""
 index = 0
+
+# Stage 4a: time-based outputs (zpinch_output.py). save_time > 0 makes the
+# output time-based (records at multiples of save_time); sample_time > 0 makes
+# diagnostics with a sample() method (zp_maps, zp_streamer_kzkx) average their
+# samples over each record window. save_steps = steps between time checks.
+[output.0d]
+save_time = -1.0
+sample_time = -1.0
+
+[output.1d]
+save_time = -1.0
+sample_time = -1.0
+
+[output.2d]
+save_time = -1.0
+sample_time = -1.0
+
+[output.maps]
+save_steps = -1
+diags = []
+type = "netcdf4"
+save_time = -1.0
+sample_time = -1.0
+
+[output.kpar]
+save_steps = -1
+diags = []
+type = "netcdf4"
+save_time = -1.0
+sample_time = -1.0
+
+[output.slices]
+save_steps = -1
+diags = []
+type = "netcdf4"
+save_time = -1.0
+sample_time = -1.0
+
+[output.kyt]
+save_steps = -1
+diags = []
+type = "netcdf4"
+save_time = -1.0
+sample_time = -1.0
+
+[output.kytavg]
+save_steps = -1
+diags = []
+type = "netcdf4"
+save_time = -1.0
+sample_time = -1.0
+
+[output.shells]
+save_steps = -1
+diags = []
+type = "netcdf4"
+save_time = -1.0
+sample_time = -1.0

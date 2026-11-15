@@ -496,13 +496,15 @@ class FlucsOutputNC(FlucsOutput):
                         # _real and _imag, respectively.
                         diagnostic_group.createVariable(
                             real_name,
-                            self.system.netcdf_precision,
+                            var.dtype or self.system.netcdf_precision,
                             var_shape,
+                            zlib=var.zlib,
                         )
                         diagnostic_group.createVariable(
                             imag_name,
-                            self.system.netcdf_precision,
+                            var.dtype or self.system.netcdf_precision,
                             var_shape,
+                            zlib=var.zlib,
                         )
 
                         # If time-independent, write data now
@@ -518,8 +520,9 @@ class FlucsOutputNC(FlucsOutput):
                     else:
                         diagnostic_group.createVariable(
                             var.name,
-                            self.system.netcdf_precision,
+                            var.dtype or self.system.netcdf_precision,
                             var_shape,
+                            zlib=var.zlib,
                         )
                         if not var.is_time_dependent:
                             diagnostic_group[var.name][:] = np.array(

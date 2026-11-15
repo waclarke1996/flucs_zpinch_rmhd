@@ -40,6 +40,11 @@ class FlucsDiagnosticVariable:
     # Time-dependent variables are calculated at every diagnostic execution
     is_time_dependent: bool = field(default=True)
 
+    # netCDF data type of the stored variable (e.g. "f4"); None = the
+    # system's netcdf_precision. zlib = compress the variable.
+    dtype: str | None = field(default=None)
+    zlib: bool = field(default=False)
+
 
 class FlucsDiagnostic(ABC):
     """
