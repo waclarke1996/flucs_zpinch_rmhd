@@ -535,8 +535,7 @@ chaintest3 rerun on a100 (chaintest3a, 13134604; 13134452 on h200 was cancelled)
   20): 3 pending at all times (one per type) until a type runs out of work. Crashed worker: its claim is adopted by
   the next worker once sacct reports the owner job ended. Two consecutive failures stop a worker. Drain:
   ROOT/queue/STOP_WORKERS. Simulation (campaign_plan.txt): 2.68 days at t_init (lower bound 2.52, all 8 GPUs busy),
-  4.0 days with x1.5 lengths; h200 lanes 9 runs each, a100 2-3 (the longest T2 first), rtx 5-6 T1 (ends last).
-  Add up to 6 h if non-priority jobs hold GPUs at submission. Usage: RUNNING_FLUCS.md section 7.
+  4.0 days x1.5 lengths (+ <= 6 h if non-priority jobs hold GPUs); rtx lanes end last. How-to: RUNNING_FLUCS.md 7.
   BUG found by the lane test: assess (extension rule) crashed once statistics existed (drift_z returns (z, rel));
   never exercised before. Fixed 06f74a4; assess checked on realtest (FINAL, <Q/Q_MHD> 0.089 +- 0.006 from t 70).
   lanetest2 (13134623, tiny grid, shortened rule): fake orphan adopted; two workers at once, each run claimed once;
