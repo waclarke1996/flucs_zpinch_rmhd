@@ -113,7 +113,11 @@ def main():
     o = o[keep]
     t, qq, E, kx0 = t[o], d0["Q_over_QMHD"][o], d0["E"][o], d0["E_kx0"][o]
     from netCDF4 import Dataset
-    dts = np.concatenate([np.asarray(Dataset(f)[g]["dt"][:], float) for f in f0 for g in sorted(Dataset(f).groups, key=int)])
+    dts = []
+    for f in f0:                       # (unclosed Dataset objects in a comprehension segfaulted with 16 segments)
+        with Dataset(f) as ds:
+            dts += [np.asarray(ds[g]["dt"][:], float) for g in sorted(ds.groups, key=int)]
+    dts = np.concatenate(dts)
     early = open(f"{RUN}/EARLY_STOP").read().strip() if os.path.exists(f"{RUN}/EARLY_STOP") else ""
     steps, wall = 0, 0.0
     for s in segs:

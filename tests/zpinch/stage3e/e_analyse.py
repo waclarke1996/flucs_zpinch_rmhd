@@ -68,8 +68,11 @@ say(f"== {name}: kb {kb} kP {kp}; padded {dim['nx']} x {dim['ny']} x {dim['nz']}
 done = [s for s in segs if os.path.exists(f"{s}/output.0d.nc")]
 pieces = [tuple(ts.flucs_piece(f"{s}/output.0d.nc", a.t_offset)) for s in done]
 t, q, E, kx = ts.concat(pieces)
-dts = np.concatenate([np.asarray(Dataset(f"{s}/output.0d.nc")[sorted(Dataset(f"{s}/output.0d.nc").groups, key=int)[-1]]["dt"][:], float)
-                      for s in done])
+dts = []
+for s in done:                         # Datasets closed explicitly (unclosed ones segfaulted f_analyse, 2026-11-16)
+    with Dataset(f"{s}/output.0d.nc") as ds:
+        dts.append(np.asarray(ds[sorted(ds.groups, key=int)[-1]]["dt"][:], float))
+dts = np.concatenate(dts)
 early = open(f"{RUN}/EARLY_STOP").read().strip() if os.path.exists(f"{RUN}/EARLY_STOP") else ""
 steps = 0
 wall = 0.0

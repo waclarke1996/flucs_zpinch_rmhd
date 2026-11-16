@@ -55,7 +55,8 @@ if os.environ.get("CAMPAIGN_TEST_RULE"):
 LANE = os.path.join(HERE, "lane_worker.sh")
 # on-disk sizes (ZFS compresses the padded zeros of a state; outputs are incompressible): measured 2026-11-16
 DISK_STATE = dict(T1=0.080, T2=0.159, T3=0.24)      # GB on disk per state.nc (T3 scaled)
-DISK_OUT = dict(T1=0.0079, T2=0.0110, T3=0.0141)    # GB per 100 R/vA, all run-time outputs (T1 measured, T2/T3 scaled)
+DISK_OUT = dict(T1=0.0129, T2=0.0162, T3=0.0195)    # GB per 100 R/vA, all run-time outputs incl. Stage 4b
+                                                   # spectra and zp_kxky (T1 measured, T2/T3 scaled)
 DISK_SNAP = dict(T1=0.038, T2=0.079, T3=0.118)     # GB: float32 snapshot in a summary .nc (optional)
 DISK_FIXED = 0.003                                 # GB per run: summary without snapshot, logs, inputs
 AMP, SEED = 1e-5, 257
@@ -364,7 +365,9 @@ def jobs_with_cost(sp):
         tier, n0 = r["tier"], float(r["N0sq"])
         tin = t_initial(float(r["gamma_damped"]))
         nst = steps_per_rva(n0) * tin
-        h = {g: nst * sp[(tier, g)] / 3.6e6 for g in GPU_N if (tier, g) in sp}
+        # + run-time diagnostic overhead at production cadence (Stage 4b, H200: T1 2.9 %, T2 1.6 %; T3 as T2)
+        ovh = dict(T1=0.029, T2=0.016, T3=0.016)[tier]
+        h = {g: nst * sp[(tier, g)] * (1 + ovh) / 3.6e6 for g in GPU_N if (tier, g) in sp}
         jobs.append(dict(r, t_init=tin, steps=nst, h=h, extrap=n0 > 2.56))
     return jobs
 
@@ -398,7 +401,7 @@ def plan(a):
     tot = {g: sum(j["h"].get(g, 0) for j in jobs) for g in gpus}
     out = [f"# campaign plan (campaign.py plan, speed file {a.speed}); {len(jobs)} points, initial lengths "
            f"(in-chain extensions: + {EXT:g} R/vA per step of the rule; '+50 %' rows assume 1.5 x every run)",
-           "# GPU-h per point = steps_per_rva(N0^2) x t_init x ms/step; '*' = N0^2 > 2.56 (extrapolated cost); "
+           "# GPU-h per point = steps_per_rva(N0^2) x t_init x ms/step x (1 + diag overhead 2.9 % T1 / 1.6 % T2); '*' = N0^2 > 2.56 (extrapolated cost); "
            "disk_GB = on-disk per run at t_init (state + outputs + summary without snapshot)",
            "run_id            tier  N0^2  gamma_d t_init  steps/RvA " + " ".join(f"{g + '_h':>7s}" for g in gpus)
            + "  disk_GB"]
@@ -436,6 +439,7 @@ def plan(a):
           for x in (1.0, 1.5)}
     snap = sum(DISK_SNAP[j["tier"]] for j in jobs)
     peak = sum(2 * DISK_STATE["T2"] for _ in range(sum(GPU_N.values())))
+    out.append("QUOTA: 52 GB free (Will, 2026-11-16: 98 of 150 GB used).")
     out.append(f"DISK (on disk, ZFS-compressed; apparent sizes ~2-3x larger for states): kept per run = one state.nc + "
                f"outputs + summary .nc WITHOUT snapshot: {dk[1.0]:.1f} GB (x1.5 lengths {dk[1.5]:.1f} GB); "
                f"+ {snap:.1f} GB if every summary carries the float32 snapshot; transient while running "
@@ -444,7 +448,10 @@ def plan(a):
                f"{DISK_STATE['T2'] + DISK_OUT['T2'] * 5.2 + DISK_FIXED:.2f} GB at ~550/520 R/vA.")
     # per-output breakdown: MB on disk per 100 R/vA (T1 measured on realtest A2-T1-k8 t 0-500, du; T2 = T1 x the
     # growth of the record size with nz: maps / kytavg x 2 (k_z bins), 1d / shells x 1.1, others unchanged)
-    per100 = [("0d (0.1)", 0.62, 0.62), ("1d spectra+profiles (1)", 2.42, 2.66), ("maps (5, 0.5-windows)", 1.39, 2.78),
+    # Stage 4b: 1d +14 kB/record (Elsasser, |k_x| spectra; T2 +2.7 kB more for the k_z W), maps + zp_kxky 176.5 kB per
+    # record (both measured on V1, apparent = on disk for float data)
+    per100 = [("0d (0.1)", 0.62, 0.62), ("1d spectra+profiles (1)", 3.82, 4.33), ("maps zp_maps (5, 0.5-win.)", 1.39, 2.78),
+              ("maps zp_kxky (5, 0.5-win.)", 3.53, 3.53),
               ("kpar (5)", 0.04, 0.04), ("kyt (1)", 0.88, 0.88), ("kytavg streamer (25)", 1.35, 2.70),
               ("shells (5)", 0.26, 0.29), ("slices (10)", 0.98, 0.98)]
     L = dict(T1=550, T2=520)

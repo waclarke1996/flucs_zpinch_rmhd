@@ -1,4 +1,4 @@
-# FLUCS ZPinchFourier run-time diagnostics: reference (flucs `zpinch` @ 54dbc2d, 2026-11-16)
+# FLUCS ZPinchFourier run-time diagnostics: reference (flucs `zpinch` @ 16dd8df+ (Stage 4b), 2026-11-16)
 
 Paths: `D/` = `flucs/src/flucs/systems/zpinch_fourier/`; `R/` = `runs/stage4a/`; `C/` = `reference/curvy3d/`;
 `.cu` = `D/zpinch_fourier.cu`. Every formula below was read off the code at 54dbc2d; line numbers refer to it.
@@ -17,7 +17,7 @@ Paths: `D/` = `flucs/src/flucs/systems/zpinch_fourier/`; `R/` = `runs/stage4a/`;
 | per-mode flux | q_k = w[−(1+κ_β) Re(δB∥_k u_{x,k}*) + κ_β Re(u∥_k δB_{x,k}*)], u_{x,k} = −ik_yΦ_k, δB_{x,k} = −ik_yΨ_k (l.187-193; `.cu` l.286-306). Σ q_k = Q̂ of eq:Qhat; es = first term, em = second |
 | per-mode injection | i_k = w[κ_P(1+κ_β) Re(ik_yΦ_k δB∥_k*) − κ_Pκ_β Re(ik_yΨ_k u∥_k*)] (l.195-199) = κ_P q_k **identically, mode by mode** |
 | dissipation | rate r_k = ν⊥(k⊥²)^{p⊥} + ν_z(k_z²)^{p_z} (p = `*_power`: 2 → k⁴, 4 → k⁸), same on all four fields; D_k = 2 r_k e_k (l.129-149; `.cu` l.309-335; core `hyperdissipation.cuh:80-112`). The zp_* diags raise NotImplementedError for adaptive/normalised dissipation or a kx/ky/kmod component with ν > 0 |
-| unit bins | i⊥ = rint(k⊥/Δk_y), i_y = m_y, i_z = \|m_z\| (l.113-122); dims store centres i·Δk. `np.rint` rounds half to even: k⊥ = 0.5 → bin 0, 1.5 → 2, 2.5 → 2 (see §12). Same rule as `C/dissipation_map.py:183` |
+| unit bins | **k⊥ (Paper 1 rule, from 2026-11-16 / Stage 4b):** width Δk = Δk_y = 2π/L_y = 1, bin j centred at j; bin 0 = {k⊥ ≤ e_0} with e_0 = ½ min(Δk_x, Δk_y) (only k⊥ = 0), bin j ≥ 1 = (e_{j−1}, e_j], e_j = (j + 0.50001)Δk: exact half-integers go to the LOWER bin (k⊥ = 0.5 → 1, 1.5 → 1, 2.5 → 2). `kperp_bin_edges`, `kperp_bin_index` (`D/zpinch_runtime_diags.py`); edges stored as `kperp_bin_edges` (dim `kperp_edge`, n+1 values [0, e_0, e_1, …]) in zp_spectra and zp_maps. Before Stage 4b: `np.rint(k⊥/Δk_y)` (half to even: 0.5 → 0, 1.5 → 2, 2.5 → 2), which the reference tools (`C/dissipation_map.py:183`, kpar_spectrum.py) still use: their shells differ at exact half-integer k⊥ (expected). k_y: i_y = m_y; \|k_x\|: i_x = \|m_x\|, one bin per allowed value, Δk_x = 2π/L_x **from the run's box** (0.5 for L_x = 4π); \|k_z\|: \|m_z\|. Dims store centres i·Δk |
 | units | normalised as main.tex §2 (Φ, Ψ in ρ⊥²v_A/R, δB∥/B₀ in ρ⊥/R, u∥ in v_Aρ⊥/R, t in R/v_A). Q/Q_MHD = Q̂/(L_y² Q_MHD) |
 
 ## 1. Time-based output mechanism (`D/zpinch_output.py`)
@@ -64,7 +64,7 @@ there (dEdt 6.8e5). They are first order: `budget_error` = O(dt·d²E/dt²), not
 |---|---|---|---|---|
 | output.0d.nc | `energy` {invariants = true, stop_dt_min = 1e-5, stop_persist_time = 5}, `zp_scalars` | 0.1 | – | 1000 |
 | output.1d.nc | `zp_spectra`, `zp_profiles` | 1.0 | – | 100 |
-| output.maps.nc | `zp_maps` | 5.0 | 0.5 | 20 (10 samples each) |
+| output.maps.nc | `zp_maps`, `zp_kxky` | 5.0 | 0.5 | 20 (10 samples each) |
 | output.kpar.nc | `zp_kpar` | 5.0 | – | 20 |
 | output.slices.nc | `zp_slices` | 10.0 | – | 10 |
 | output.kyt.nc | `zp_kytransfer` | 1.0 | – | 100 |
@@ -74,6 +74,8 @@ there (dEdt 6.8e5). They are first order: `budget_error` = O(dt·d²E/dt²), not
 "test" cadence (campaign.py:61-65): maps/kpar/shells 2.5, slices 5, kytavg 5 (sample 1). Example input:
 `R/realtest/A2-T1-k8/t0100/input.toml`. Shapes below are for T1 (verified with netCDF4 on
 `R/realtest/A2-T1-k8/t0500/output.*.nc`). Overhead (A3a T2, H200): diags a-f 0.4 %, a-h 1.1 % of wall time.
+Stage 4b (all production outputs incl. the new spectra and zp_kxky, H200, `runs/stage4b/overhead_4b.py`): see
+PROGRESS Stage 4b (T1 2.9 % of the time-step cost; zp_shells 1.1 %, 0d energy + scalars 1.0 %).
 
 ## 3. `energy` (0d), `ZPinchEnergyDiag`, `D/zpinch_fourier_diagnostics.py:29-314`
 
@@ -141,39 +143,78 @@ All `(time,)` f8, instantaneous; sums over solved modes with w.
 all ≤ 1e-14 rel (bands ≤ 9.8e-15); Q_es + Q_em = energy Q/Q_MHD 2.7e-16. cfl/cfl_max/dt_min: not independently
 checked (t = 0 values only).
 
-## 5. (b) `zp_spectra` (1d), `ZPSpectraDiag`, l.306-340
+## 5. (b) `zp_spectra` (1d), `ZPSpectraDiag`
 
-Instantaneous; f8; Σ over the solved modes in each unit bin (box-average contributions, w included). Dims `kperp`
-(n = rint(k⊥,max)+1 = 61 for T1), `ky` (K_y+1 = 43), `kz` (\|k_z\|, K_z+1 = 86).
+Instantaneous; f8; Σ over the solved modes in each bin (box-average contributions, w included). Dims `kperp` (Paper 1
+unit bins, §0; T1: 61 bins), `ky` (K_y+1 = 43), `kx` (\|k_x\|, K_x+1 = 86 for L_x = 4π: centres 0, 0.5, …, 42.5),
+`kz` (\|k_z\|, K_z+1 = 86 on T1); time-independent `kperp_bin_edges(kperp_edge)`.
 
-| variable (time, kperp) | content per bin | (time, ky) | (time, kz) |
-|---|---|---|---|
-| E, E_uperp, E_bperp, E_dbpar, E_upar | Σ e_k, parts | E_ky | E_kz |
-| inj | Σ i_k (= κ_P·Qhat_kperp exactly) | – | inj_kz |
-| D_perp, D_par | Σ 2ν⊥(k⊥²)^{p⊥} e_k, Σ 2ν_z(k_z²)^{p_z} e_k | – | D_perp_kz, D_par_kz |
-| Qhat, Qhat_es, Qhat_em | Σ q_k (es, em) | Qhat_ky, Qhat_es_ky, Qhat_em_ky | – |
-| kz2E | Σ k_z² e_k (k_z,rms(k⊥) = (kz2E/E)^{1/2}) | – | – |
+Elsasser energies per mode (`ZPGrid.mode_elsasser`), names as the 0d invariants of `energy` (zplus, zminus, Zpplus,
+Zpminus; the zp_shells set calls the last two zparplus/zparminus): ζ± = Φ ± Ψ, Z± = u∥ ± s δB∥, s = √(1 + 1/κ_β)
+(curvy3d `zetaplus`, `zparplus`, solver l.2505-2507):
+  zplus_k = ½ w k⊥² \|ζ+_k\|², zminus_k = ½ w k⊥² \|ζ−_k\|², Zpplus_k = ½ w \|Z+_k\|², Zpminus_k = ½ w \|Z−_k\|²,
+so per mode (and per bin) (zplus + zminus)/2 = E_uperp + E_bperp and (Zpplus + Zpminus)/2 = E_dbpar + E_upar.
 
-Names are `<n>_kperp`, `<n>_ky`, `<n>_kz`. **Reader:** `t, S = load_diag(segs_1d, "zp_spectra"); S["kperp"], S["E_kperp"]`.
-**Verification:** verify.txt (b): vs dissipation_map.py shells (E_s, Dp_s, Dz_s, I_s, kzrms_s) and per-mode arrays
-≤ 6.7e-15. **curvy3d:** dissipation_map.py uses the same rint(k⊥) shells and w; curvy3d's own `*_spec_calc` are
-half-space (one member per conjugate pair) time averages — see `C/spectrum_check.py:60`.
+| quantity | `_kperp` | `_ky` | `_kx` | `_kz` |
+|---|---|---|---|---|
+| E, E_uperp, E_bperp, E_dbpar, E_upar | ✓ | ✓ | ✓ | E only |
+| zplus, zminus, Zpplus, Zpminus | ✓ | ✓ | ✓ | ✓ |
+| Qhat, Qhat_es, Qhat_em (Σ q_k) | ✓ | ✓ | ✓ | – |
+| inj (Σ i_k = κ_P·Qhat exactly) | ✓ | – | – | ✓ |
+| D_perp, D_par (Σ 2ν⊥(k⊥²)^{p⊥} e_k, Σ 2ν_z(k_z²)^{p_z} e_k) | ✓ | – | – | ✓ |
+| kz2E (Σ k_z² e_k; k_z,rms(k⊥) = (kz2E/E)^{1/2}) | ✓ | – | – | – |
 
-## 6. (c) `zp_maps` (maps), `ZPMapsDiag`, l.346-376
+Names `<n>_kperp`, `<n>_ky`, `<n>_kx`, `<n>_kz`. The \|k_x\| spectra sum +k_x and −k_x (box average): **curvy3d's plot
+scripts plot only the +k_x half of their (k_x, k_y) spectra, so their k_x > 0 points are about half of ours** (exactly
+half on k_y = 0, where ours is ±k_x symmetric). **Reader:** `t, S = load_diag(segs_1d, "zp_spectra"); S["kx"],
+S["zplus_kx"]`; bins: `c, e = kperp_bins(file)` (`D/zpinch_readers.py`; older rint files return rint-equivalent edges).
+**Verification:** Stage 4a verify.txt (b) (rint bins): vs dissipation_map.py ≤ 6.7e-15. Stage 4b: see §5a.
+**curvy3d:** dissipation_map.py uses rint(k⊥) shells (differ at exact half-integer k⊥); curvy3d's own `*_spec_calc`
+are half-space time averages without ½, w or k⊥² (§6a).
 
-Window averages (needs sample_time). 2D unit-bin maps (time, kperp, kz), **f4, zlib**: `E_map` (Σ e_k), `inj_map`
-(Σ i_k), `D_perp_map`, `D_par_map` per (i⊥, \|m_z\|) bin, averaged over the n_samples samples of the window;
-`n_samples` (time,) f8. **Reader:** `t, M = load_diag(segs_maps, "zp_maps")` (window centre ≠ record time: the
-window is (t − save_time, t]). **Verification:** verify.txt (c): f4 rel ≤ 5e-8 vs dissipation_map.py; Σ_kz E_map =
-E_kperp 3.7e-9; window counts in chain tests (PROGRESS part 2 (2)). Consumers: `R/f_analyse.py` (dissipation_map
-quantities per two-state state, partial outer bin weighted by the fraction above the cut, `above()` l.55-59).
+## 5a. Stage 4b verification of the new spectra, maps and bins (`runs/stage4b/verify/verify.txt`, 81 PASS, 0 FAIL)
+
+V1 (A2-T1 turbulent state, reset to t = 0; records 0, 0.1, 0.2): per bin (zplus+zminus)/2 = E_uperp+E_bperp and
+(Zpplus+Zpminus)/2 = E_dbpar+E_upar ≤ 1.2e-14 (k⊥, k_y, \|k_x\|; k_z: Σ W/2 = E 5.6e-15); bin sums = 0d invariants
+≤ 1.2e-15; sums over k⊥, k_y, \|k_x\|, \|k_z\| equal ≤ 6.2e-15 (E, W, Qhat, Qhat_es, Qhat_em); zp_kxky (t = 0, n = 1):
+Σ_ky (±k_x folded) = `_kx`, Σ_kx = `_ky` ≤ 2.7e-8 (float32); = independent numpy per-mode formula on the seed ≤ 3.9e-8;
+= curvy3d `X_spec_calc` formula with its mask on the seed converted by flucs_to_curvy3d.py (§6a relations) ≤ 4.6e-8,
+curvy3d's −k_x entries on k_y = 0 exactly 0. V2 (48×24×48, L_x = 8π): Δk_x = 0.25, edges [0, 0.125, 1.50001, …] =
+`kperp_bin_edges(0.25, 1)`, k_x = 0.25 (k_y = 0) in bin 1; E, zplus, Zpminus, Qhat in k⊥ and \|k_x\| bins = numpy from
+the final state ≤ 1.5e-15. CPU unit test `runs/stage4b/test_kperp_bins.py` (L_x = 2π, 4π, 8π): k⊥ = 0 → 0, k_x = Δk_x
+→ 1, 1.5 → 1, 2.5 → 2, integers j → j, every box k⊥ in (e_{j−1}, e_j], all bins used.
+
+## 6. (c) `zp_maps` (maps), `ZPMapsDiag`
+
+Window averages (needs sample_time). 2D maps (time, kperp, kz), **f4, zlib**: `E_map` (Σ e_k), `inj_map` (Σ i_k),
+`D_perp_map`, `D_par_map` per (k⊥ bin, \|m_z\|), averaged over the n_samples samples of the window; `n_samples`
+(time,) f8; `kperp_bin_edges` as zp_spectra. **Reader:** `t, M = load_diag(segs_maps, "zp_maps")` (window = (t −
+save_time, t]). **Verification:** Stage 4a verify.txt (c): f4 rel ≤ 5e-8 vs dissipation_map.py (rint bins); Σ_kz
+E_map = E_kperp 3.7e-9; window counts in chain tests. Consumers: `R/f_analyse.py` (dissipation_map quantities per
+two-state state; outer bin weighted by its fraction above the cut, `above()`; pile-up mode counts in the file's bins).
+
+## 6a. (c') `zp_kxky` (maps), `ZPKxKyMapDiag` — (k_x, k_y) maps summed over k_z
+
+Window averages like zp_maps (same output, sample 0.5, save 5 R/vA in production), **f4, zlib**. Dims `kx` (signed,
+−K_xΔk_x … K_xΔk_x, 2K_x+1 = 171 on T1/T2), `ky` (0 … K_y). Variables `<n>_kxky` for n = E, zplus, zminus, Zpplus,
+Zpminus, Qhat: Σ_{k_z} of the per-mode quantity (w included), plus `n_samples`. Box-average convention: the k_y = 0
+row holds both members of every conjugate pair, so it is symmetric in k_x. **curvy3d** `X_spec_calc[k_x, k_y]` = time
+average of Σ_kz \|mask·X\|² (solver l.2650-2658) with `wavenumber_mask` (l.406-409: on k_y = 0 only k_x > 0, and at
+k_x = 0 only k_z > 0), no ½, no w, no k⊥². Hence zplus_kxky = k⊥²·zplus_spec_calc at k_y > 0 (Zp±: = Zp±_spec_calc),
+and zplus_kxky(k_x, 0) + zplus_kxky(−k_x, 0) = k⊥²·zplus_spec_calc(k_x, 0) for k_x > 0 (curvy3d's −k_x entries on
+k_y = 0 are 0). E_kxky = k⊥²(Phi_spec_calc + Psi_spec_calc) + c·deltaBpar_spec_calc + upar_spec_calc likewise.
+Sizes: 6 × 171 × 43 × 4 B = 176 kB per record (3.5 MB per 100 R/vA). **Reader:** `t, M = load_diag(segs_maps,
+"zp_kxky"); M["kx"], M["ky"], M["zplus_kxky"]`. **Verification:** §5a.
 
 ## 7. (d) `zp_kpar` (kpar), `ZPKparDiag`, l.382-499 — per-record accumulators of `C/kpar_spectrum.py`
 
-Octave k⊥ shells [lo, hi), edges 0.25, 0.75, 1.5, 3, 6, … (shells with lo < min(K_xΔk_x, K_yΔk_y); T1: 7 shells,
-lo 0.25 … 24, hi 0.75 … 48). The k_y = 0 plane of a copy is projected Hermitian, f → ½(f + f*_{−k}) (l.456-458).
+Octave k⊥ shells, nominal edges 0.25, 0.75, 1.5, 3, 6, … (shells with lo < min(K_xΔk_x, K_yΔk_y); T1: 7 shells,
+lo 0.25 … 24, hi 0.75 … 48). **From Stage 4b the boundary rule of §0:** shell = (lo', hi'] with lo' = lo + 1e-5Δk,
+hi' = hi + 1e-5Δk (an exact edge value goes to the LOWER shell: k⊥ = 1.5 now in (0.75, 1.5], k⊥ = 3 in (1.5, 3]),
+and the first lower edge = ½ min(Δk_x, Δk_y) (0.25 for L_x = 4π). kpar_spectrum.py keeps [lo, hi): its shells differ
+only for k⊥ exactly on an edge. The k_y = 0 plane of a copy is projected Hermitian, f → ½(f + f*_{−k}) (l.456-458).
 Products on an (N_z, N_x, N_y) grid, N = next_fast_len(⌈2·pad·K⌉+1), pad = 2 → exact. f_s = f restricted to shell s,
-Ψ_< = Ψ restricted to k⊥ < lo. Dims (time, field, shell), field order **Φ, Ψ, δB∥, u∥**, f8:
+Ψ_< = Ψ restricted to k⊥ ≤ lo' (all lower shells). Dims (time, field, shell), field order **Φ, Ψ, δB∥, u∥**, f8:
 
 | var | definition | var | definition |
 |---|---|---|---|
@@ -301,14 +342,19 @@ Identities: self-transfers antisymmetric T = −Tᵀ; TuB = −TBuᵀ; TBparupar
 set = 0; per receiving shell ½Σ_j(zplus+zminus) = Σ_j(Tuu+TBu+TBB+TuB), ½Σ_j(zparplus+zparminus) = Σ_j(TBparBpar+
 TBparupar+Tuparupar+TuparBpar) (E⊥ = (W_ζ++W_ζ−)/2, E_comp = (W_Z++W_Z−)/2). Curvature exchange, injection and
 dissipation are not in these matrices.
+Shell energies (Stage 4b): `<st>_E_<part>` (time, `<st>_to`), part ∈ {uperp, bperp, dbpar, upar}: Σ e_k (box average)
+of the modes in shell l, so dE_l/dt = Σ_j T[j, l] + (linear exchange, injection, dissipation in shell l).
 **Reader:** `t, S = load_diag(segs_shells, "zp_shells"); S["kperp_Tuu"].mean(0)`; plotter CSV/JSON:
 `runs/tools/zp_shells_export.py` (CSV = time mean / L_y², as the scripts; sums uperp = Tuu+TBu, deltaBperp = TBB+TuB,
 deltaBpar = TBparBpar+TuparBpar, upar = Tuparupar+TBparupar).
 **Verification:** verify.txt (h): both plotters run unmodified on the same state, FLUCS = CSV × L_y², no transpose,
 ≤ 7.2e-14 (all 12 × 2 shell types; T2 grid). K4 (check_transfers.py) on REALTEST t0500: antisymmetries, Σ = 0 and the
-two per-shell budgets ≤ 8e-14 [1e-10]. **Not independently verified:** the absolute sign (into l) — it equals the
-scripts' convention (they label T[j,l] "from j to l") and follows from the code algebra above, but no dynamical test
-(Σ_j T[j,l] vs the step change of E_l) was run; K1 (§10) is the only dynamical sign test (k_y line).
+two per-shell budgets ≤ 8e-14 [1e-10]. **Dynamical sign test (Stage 4b, `runs/stage4b/verify/V3_signtest`,
+compare_4b.py):** A2-T1 turbulent state with κ_P = 0 and ν = 0 (then every linear term, curvature exchange included,
+conserves each mode's energy), dt = 1e-4, zp_shells every step: the central difference of the shell energies
+dE_l/dt = Σ_j T[j, l] (kin/mag set) = ½Σ_j T (Elsasser set) to 8.8e-7 (k⊥ shells) and 4.3e-7 (k_z shells) of max|T|
+over 8 steps, same sign on every active shell; total E constant to 7e-11. So T[j, l] is the rate INTO shell l
+FROM shell j (sign confirmed).
 
 ## 13. Other diagnostics in `zpinch_fourier_diagnostics.py`
 
@@ -343,15 +389,18 @@ build_registry.py / make_flux_table.py: `runs/tools/flucs_summary_nc.py` (`heatf
 | upar_profile, turb_* profiles, char wavenumbers, alfvenic comps | run mean / per save | per record | 1 (average FLUCS records) |
 | streamer kzkx maps | run mean | window means, n_samples | 1 (n_samples-weighted mean) |
 | shell transfers | CSV = mean / L_y² | per record, box average | CSV = mean(FLUCS)/L_y² |
+| `X_spec_calc` (k_x, k_y) | time mean Σ_kz \|mask·X\|², half space (k_y = 0: k_x > 0 only), no ½, w, k⊥² | `zp_kxky` window means, box average | zplus_kxky = k⊥²·zplus_spec_calc (k_y > 0); ours(k_x,0)+ours(−k_x,0) = k⊥²·curvy(k_x,0) (§6a) |
+| k_x spectra in plot scripts | only the +k_x half plotted | `<n>_kx`: \|k_x\| bins, ±k_x summed | curvy3d's k_x > 0 points ≈ ½ of ours |
+| k⊥ unit shells (dissipation_map, kpar_spectrum) | rint(k⊥) / [lo, hi) | Paper 1 rule (§0) | differ only at exact half-integer / edge k⊥ |
 | time axis | implicit i·save_time_hf (record at first t ≥ t_grid − dt/2) | stored actual t (first t ≥ t_grid − ε) | offsets < 1 dt |
 
 ## 16. Discrepancies / open points
 
 1. `zp_scalars` option `kz_bands` holds **k⊥** band edges (`zpinch_runtime_diags.py:247, 267`); `kzrms_<lo>_<hi>`
    = k_z,rms in k⊥ ∈ [lo, hi). Name only; docstring (l.14-15) is right.
-2. Unit k⊥ bins use `np.rint` (round half to even, l.113): k⊥ = 0.5 (k_x = ±0.5, k_y = 0) lands in bin 0, 1.5 → 2,
-   2.5 → 2, so bins are not [i−½, i+½) at exact half-integers and `E_kperp[0]` ≠ 0. Identical to dissipation_map.py:183,
-   so tool comparisons are unaffected; matters only if bin edges are assumed symmetric.
+2. (Resolved in Stage 4b.) Unit k⊥ bins used `np.rint` (half to even: k⊥ = 0.5 in bin 0, 1.5 → 2, 2.5 → 2). Now the
+   Paper 1 rule (§0) with stored edges; the reference tools (dissipation_map.py:183, kpar_spectrum.py) still use rint /
+   [lo, hi), so their shells differ at exact half-integer (edge) k⊥ — expected. zp_scalars `kz_bands` keep [lo, hi).
 3. `zp_kpar` field order Φ, Ψ, δB∥, u∥ (l.409, 465) vs kpar_spectrum.py (Φ, Ψ, u∥, δB∥; `C/kpar_spectrum.py:48`):
    per-field rows are permuted; combined values and chi (Φ) identical.
 4. curvy3d `dBx_profile`: the duplicated `+=` is at `C/curvy3dsolver_rmhd_zpinch_cupy_ARS343.py:2580, 2583`, inside
@@ -372,8 +421,7 @@ build_registry.py / make_flux_table.py: `runs/tools/flucs_summary_nc.py` (`heatf
    period from the first file's `input.toml` only (l.99); without an `input.toml` next to it, no dedup (silently).
 8. Shell coordinates (`zpinch_runtime_diags.py:809-832`): `kz_from[0]` = 0.5 although shell 0 holds k_z = 0 only;
    `kperp` shell 0 and the last shell of each type are empty on T1 (n = ⌈log₂⌉ + 1 adds one). Same as the plotter scripts.
-9. Shell-transfer absolute sign (into l) is verified only by agreement with the plotter scripts and by code algebra;
-   no dynamical test (open; §12).
+9. (Closed in Stage 4b.) Shell-transfer sign: dynamical test with κ_P = 0, ν = 0 (§12): T[j, l] = into l from j.
 10. `zp_scalars` `cfl_max`/`dt_min` use system-level state reset by every zp_scalars execution
     (`zpinch_runtime_diags.py:297-300`, `zpinch_fourier.py:390-398`): listing zp_scalars in two outputs would make
     them interfere (production: 0d only). Not independently verified.
@@ -383,5 +431,4 @@ build_registry.py / make_flux_table.py: `runs/tools/flucs_summary_nc.py` (`heatf
 13. Code vs docstrings otherwise consistent: `ZPinchEnergyDiag` docstring (l.37-48) and `.cu` l.367-381 match the
     functors; the zp_kytransfer formulas (l.586-596) match the code including signs (only the curvy3d remark of
     item 4 is in doubt).
-14. chaintest3 (job 13134452, H200) has no run.log; its A100 copy chaintest3a ran (P1-P7 FAIL count 0) but is not yet
-    recorded in PROGRESS.md.
+14. (Closed.) chaintest3a (A100) FAIL count 0 in P1-P7, recorded in PROGRESS Stage 4a part 4.

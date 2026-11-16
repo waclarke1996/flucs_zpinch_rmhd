@@ -1,0 +1,107 @@
+
+
+
+
+
+
+
+
+
+
+
+== V1 spectra / maps on the A2-T1 turbulent state
+  records 1d [0.         0.10022254 0.20062182], 0d [0.         0.10022254 0.20062182]...
+  C1 kperp: (zplus+zminus)/2 = E_uperp+E_bperp per bin                                      2.13e-15 [1e-13] PASS
+  C1 kperp: (Zpplus+Zpminus)/2 = E_dbpar+E_upar per bin                                     8.40e-16 [1e-13] PASS
+  C1 ky   : (zplus+zminus)/2 = E_uperp+E_bperp per bin                                      6.97e-15 [1e-13] PASS
+  C1 ky   : (Zpplus+Zpminus)/2 = E_dbpar+E_upar per bin                                     1.20e-14 [1e-13] PASS
+  C1 kx   : (zplus+zminus)/2 = E_uperp+E_bperp per bin                                      3.51e-15 [1e-13] PASS
+  C1 kx   : (Zpplus+Zpminus)/2 = E_dbpar+E_upar per bin                                     1.09e-14 [1e-13] PASS
+  C1 kz   : (zplus+zminus+Zpplus+Zpminus)/2 = E per bin                                     5.63e-15 [1e-13] PASS
+  C2 sum_kperp E = 0d E (3 records)                                                         7.97e-16 [1e-12] PASS
+  C2 sum_kperp zplus = 0d zplus (3 records)                                                 9.57e-16 [1e-12] PASS
+  C2 sum_kperp zminus = 0d zminus (3 records)                                               1.07e-15 [1e-12] PASS
+  C2 sum_kperp Zpplus = 0d Zpplus (3 records)                                               1.19e-15 [1e-12] PASS
+  C2 sum_kperp Zpminus = 0d Zpminus (3 records)                                             1.01e-15 [1e-12] PASS
+  C3 sum_ky E = sum_kperp E                                                                 3.79e-15 [1e-12] PASS
+  C3 sum_kx E = sum_kperp E                                                                 1.79e-15 [1e-12] PASS
+  C3 sum_kz E = sum_kperp E                                                                 2.99e-15 [1e-12] PASS
+  C3 sum_ky zplus = sum_kperp zplus                                                         2.68e-15 [1e-12] PASS
+  C3 sum_kx zplus = sum_kperp zplus                                                         1.72e-15 [1e-12] PASS
+  C3 sum_kz zplus = sum_kperp zplus                                                         2.11e-15 [1e-12] PASS
+  C3 sum_ky zminus = sum_kperp zminus                                                       2.77e-15 [1e-12] PASS
+  C3 sum_kx zminus = sum_kperp zminus                                                       1.92e-15 [1e-12] PASS
+  C3 sum_kz zminus = sum_kperp zminus                                                       8.54e-16 [1e-12] PASS
+  C3 sum_ky Zpplus = sum_kperp Zpplus                                                       2.85e-15 [1e-12] PASS
+  C3 sum_kx Zpplus = sum_kperp Zpplus                                                       2.37e-15 [1e-12] PASS
+  C3 sum_kz Zpplus = sum_kperp Zpplus                                                       2.14e-15 [1e-12] PASS
+  C3 sum_ky Zpminus = sum_kperp Zpminus                                                     3.53e-15 [1e-12] PASS
+  C3 sum_kx Zpminus = sum_kperp Zpminus                                                     2.02e-15 [1e-12] PASS
+  C3 sum_kz Zpminus = sum_kperp Zpminus                                                     2.52e-15 [1e-12] PASS
+  C3 sum_ky Qhat = sum_kperp Qhat                                                           2.65e-15 [1e-12] PASS
+  C3 sum_kx Qhat = sum_kperp Qhat                                                           2.30e-15 [1e-12] PASS
+  C3 sum_ky Qhat_es = sum_kperp Qhat_es                                                     6.17e-15 [1e-12] PASS
+  C3 sum_kx Qhat_es = sum_kperp Qhat_es                                                     1.39e-15 [1e-12] PASS
+  C3 sum_ky Qhat_em = sum_kperp Qhat_em                                                     3.95e-15 [1e-12] PASS
+  C3 sum_kx Qhat_em = sum_kperp Qhat_em                                                     8.24e-16 [1e-12] PASS
+  zp_kxky records [0.         0.10022254 0.20062182], n_samples [1. 2. 2.], kx -42.5..42.5 (d 0.5), ky 0..42
+  C4 zp_kxky E: sum_ky (+-kx folded) = E_kx (t = 0)                                         1.89e-08 [3e-06] PASS
+  C4 zp_kxky E: sum_kx = E_ky (t = 0)                                                       1.10e-08 [3e-06] PASS
+  C4 zp_kxky zplus: sum_ky (+-kx folded) = zplus_kx (t = 0)                                 2.71e-08 [3e-06] PASS
+  C4 zp_kxky zplus: sum_kx = zplus_ky (t = 0)                                               2.48e-08 [3e-06] PASS
+  C4 zp_kxky zminus: sum_ky (+-kx folded) = zminus_kx (t = 0)                               8.43e-09 [3e-06] PASS
+  C4 zp_kxky zminus: sum_kx = zminus_ky (t = 0)                                             2.71e-09 [3e-06] PASS
+  C4 zp_kxky Zpplus: sum_ky (+-kx folded) = Zpplus_kx (t = 0)                               1.13e-08 [3e-06] PASS
+  C4 zp_kxky Zpplus: sum_kx = Zpplus_ky (t = 0)                                             6.28e-09 [3e-06] PASS
+  C4 zp_kxky Zpminus: sum_ky (+-kx folded) = Zpminus_kx (t = 0)                             2.57e-08 [3e-06] PASS
+  C4 zp_kxky Zpminus: sum_kx = Zpminus_ky (t = 0)                                           1.73e-08 [3e-06] PASS
+  C4 zp_kxky Qhat: sum_ky (+-kx folded) = Qhat_kx (t = 0)                                   1.78e-08 [3e-06] PASS
+  C4 zp_kxky Qhat: sum_kx = Qhat_ky (t = 0)                                                 1.44e-08 [3e-06] PASS
+  C5 zp_kxky E (t = 0, float32) = numpy from the seed state                                 3.70e-08 [3e-06] PASS
+  C5 zp_kxky zplus (t = 0, float32) = numpy from the seed state                             3.85e-08 [3e-06] PASS
+  C5 zp_kxky zminus (t = 0, float32) = numpy from the seed state                            7.53e-09 [3e-06] PASS
+  C5 zp_kxky Zpplus (t = 0, float32) = numpy from the seed state                            2.01e-08 [3e-06] PASS
+  C5 zp_kxky Zpminus (t = 0, float32) = numpy from the seed state                           3.44e-08 [3e-06] PASS
+  C5 zp_kxky Qhat (t = 0, float32) = numpy from the seed state                              2.34e-08 [3e-06] PASS
+  C6 zplus_kxky = (k_perp^2) zplus_spec_calc at k_y > 0                                     3.85e-08 [3e-06] PASS
+  C6 zplus: ours(kx,0) + ours(-kx,0) = (k_perp^2) curvy(kx,0), kx > 0                       4.55e-08 [3e-06] PASS
+  C6 zplus: curvy(kx < 0, k_y = 0) = 0 (its mask)                                           0.00e+00 [0e+00] PASS
+  C6 zminus_kxky = (k_perp^2) zminus_spec_calc at k_y > 0                                   7.53e-09 [3e-06] PASS
+  C6 zminus: ours(kx,0) + ours(-kx,0) = (k_perp^2) curvy(kx,0), kx > 0                      1.27e-08 [3e-06] PASS
+  C6 zminus: curvy(kx < 0, k_y = 0) = 0 (its mask)                                          0.00e+00 [0e+00] PASS
+  C6 Zpplus_kxky = (k_perp^2) Zpplus_spec_calc at k_y > 0                                   2.01e-08 [3e-06] PASS
+  C6 Zpplus: ours(kx,0) + ours(-kx,0) = (k_perp^2) curvy(kx,0), kx > 0                      1.80e-08 [3e-06] PASS
+  C6 Zpplus: curvy(kx < 0, k_y = 0) = 0 (its mask)                                          0.00e+00 [0e+00] PASS
+  C6 Zpminus_kxky = (k_perp^2) Zpminus_spec_calc at k_y > 0                                 2.07e-08 [3e-06] PASS
+  C6 Zpminus: ours(kx,0) + ours(-kx,0) = (k_perp^2) curvy(kx,0), kx > 0                     4.27e-08 [3e-06] PASS
+  C6 Zpminus: curvy(kx < 0, k_y = 0) = 0 (its mask)                                         0.00e+00 [0e+00] PASS
+== V2 tiny box L_x = 8 pi
+  records [0.  0.5 1. ]; kperp edges [0.      0.125   1.50001 2.50001] ...; kx centres [0.   0.25 0.5 ]
+  first edge = 0.5 min(dkx, dky) = 0.125, then 1.50001                                      0.00e+00 [1e-14] PASS
+  stored edges = kperp_bin_edges(0.25, 1, .)                                                0.00e+00 [1e-14] PASS
+  (a) mode k_x = 0.25, k_y = 0 -> bin 1                                                     0.00e+00 [0e+00] PASS
+  final state time 1.000000 = last record time 1.000000                                     0.00e+00 [1e-12] PASS
+  E_kperp (last record) = numpy with the Paper 1 bins from the final state                  6.44e-16 [1e-12] PASS
+  E_kx = numpy |k_x| bins                                                                   1.03e-15 [1e-12] PASS
+  zplus_kperp (last record) = numpy with the Paper 1 bins from the final state              1.49e-15 [1e-12] PASS
+  zplus_kx = numpy |k_x| bins                                                               1.53e-15 [1e-12] PASS
+  Zpminus_kperp (last record) = numpy with the Paper 1 bins from the final state            6.58e-16 [1e-12] PASS
+  Zpminus_kx = numpy |k_x| bins                                                             8.01e-16 [1e-12] PASS
+  Qhat_kperp (last record) = numpy with the Paper 1 bins from the final state               9.50e-16 [1e-12] PASS
+  Qhat_kx = numpy |k_x| bins                                                                6.34e-16 [1e-12] PASS
+== V3 dynamical sign test of zp_shells (kP = 0, nu = 0, dt = 1e-4, every step)
+  10 records, t 0.0e+00..9.0e-04, dt [0.0001]; total E rel. change 6.6e-11
+  kperp: shell energies [0.0000e+00 3.7670e+00 1.6061e+01 6.6340e+00 4.9840e+00 3.0920e+00
+ 1.1160e+00 1.0000e-02 0.0000e+00]
+  kperp: sum_j T[j,l] (step 1) [ 0.     -1.0245 -9.2953 -1.1447 -0.1576  1.5138  8.3978  1.7104  0.    ]
+  kperp: dE_l/dt          (step 1) [ 0.     -1.0245 -9.2953 -1.1447 -0.1576  1.5138  8.3978  1.7104  0.    ]
+  kperp: dE_l/dt = sum_j T_magkin[j, l] (all shells, 8 steps), rel. to max |T|              8.82e-07 [1e-03] PASS
+  kperp: dE_l/dt = 1/2 sum_j T_elsasser[j, l]                                               8.82e-07 [1e-03] PASS
+  kperp: sign agreement on active shells (1 - fraction)                                     0.00e+00 [0e+00] PASS
+  kz: shell energies [ 5.796 11.998  6.763  4.779  3.27   2.178  0.862  0.019  0.   ]
+  kz: sum_j T[j,l] (step 1) [-3.5544 -6.0833 -1.3347  0.5656  1.0615  2.37    5.189   1.7862  0.    ]
+  kz: dE_l/dt          (step 1) [-3.5544 -6.0833 -1.3347  0.5656  1.0615  2.37    5.189   1.7862  0.    ]
+  kz: dE_l/dt = sum_j T_magkin[j, l] (all shells, 8 steps), rel. to max |T|                 4.25e-07 [1e-03] PASS
+  kz: dE_l/dt = 1/2 sum_j T_elsasser[j, l]                                                  4.25e-07 [1e-03] PASS
+  kz: sign agreement on active shells (1 - fraction)                                        0.00e+00 [0e+00] PASS
+FAIL count 0

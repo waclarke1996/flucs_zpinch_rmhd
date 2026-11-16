@@ -554,3 +554,28 @@ chaintest3 rerun on a100 (chaintest3a, 13134604; 13134452 on h200 was cancelled)
   true mean (no number affected; the two comments are corrected). The absolute sign of zp_shells transfers is checked
   algebraically and against the plotters, not dynamically.
 STOP: production (campaign.py lanes runs/prod4 + 11 queue.sh submits) waits for Will's approval and the free quota.
+
+## Stage 4b - Elsasser/k_x spectra, (k_x,k_y) maps, Paper 1 k_perp bins, shell sign test (2026-11-16), flucs zpinch @ 16dd8df+
+NEW (zpinch_runtime_diags.py): zp_spectra adds zplus, zminus, Zpplus, Zpminus (W_zeta+-, W_Z+-, names as the 0d
+  invariants; shells call Z+- zparplus/minus) in k_perp/k_y/|k_x|/|k_z|, and |k_x| spectra of E, its parts, the four W,
+  Qhat(_es,_em) (dk_x = 2pi/L_x from the box, +-k_x summed). zp_kxky (maps output): (k_x, k_y) maps summed over k_z of E,
+  four W, Qhat; window 5 R/vA (sample 0.5), f4. k_perp unit bins: Paper 1 rule (bin 0 = {0}, (e_j-1, e_j], e_0 =
+  0.5 min(dkx,dky), e_j = j + 0.50001; edges stored, reader kperp_bins); zp_kpar octave shells same edge rule.
+  zp_shells adds shell energies <st>_E_<part>. f_analyse uses the stored bins.
+VERIFY runs/stage4b/verify/verify.txt (job 13136371, A100): 81 PASS / 0 FAIL. Per bin (z+ + z-)/2 = E_u+E_b and
+  (Z+ + Z-)/2 = E_dbpar+E_upar <= 1.2e-14; bin sums = 0d invariants <= 1.2e-15; k_perp/k_y/k_x/k_z sums equal <= 6e-15;
+  zp_kxky = numpy <= 3.9e-8 (f4) and = curvy3d X_spec_calc formula with its mask on the converted state <= 4.6e-8
+  (factors: ours = k_perp^2 x curvy at k_y > 0; ours(kx,0)+ours(-kx,0) = k_perp^2 curvy(kx,0); W_Z without k_perp^2).
+  L_x = 8 pi run: dk_x 0.25, edges [0, 0.125, 1.50001, ...], k_x = 0.25 in bin 1, spectra = numpy <= 1.5e-15. CPU test
+  test_kperp_bins.py (L_x 2pi/4pi/8pi): 0.5 -> 1, 1.5 -> 1, 2.5 -> 2. Reference tools keep rint (differ at half-integers).
+SIGN TEST (open point 9 closed): A2-T1 state, kP = 0, nu = 0, dt 1e-4, shells every step: dE_l/dt = sum_j T[j,l]
+  (kin/mag) = 1/2 sum_j T (Elsasser) to 8.8e-7 (k_perp) / 4.3e-7 (k_z) of max|T|, sign right on every active shell:
+  T[j,l] = into l from j. Total E constant 7e-11.
+OVERHEAD (H200, all production outputs, zp_timing x production calls/RvA): T1 2.9 % (shells 1.1, 0d 1.0, kpar 0.3,
+  1d 0.2, kxky 0.02), T2 1.6 % of the time-step cost (overhead_4b.py); now included in campaign_plan.txt.
+LANES lanetest3 (13136371): as lanetest2 with the new outputs, identical verdicts (<Q/Q_MHD> 0.061/0.035/0.003), records
+  continuous, zp_kxky in every record. BUG: f_analyse segfaulted on 16 segments (unclosed netCDF Datasets); fixed, also
+  in e_analyse.
+DISK per run (on disk, no snapshot): T1 153 MB, T2 246 MB (outputs 12.9 / 16.2 MB per 100 R/vA); campaign 11.8 GB
+  (14.0 x1.5) of 52 GB free. Plan: 2.75 days (x1.5: 4.1), 321 H200-h. Approved by Will: no snapshot, lanes 5/3/3.
+STOP for Will's go-ahead: `$PY runs/stage4a/campaign.py lanes runs/prod4` + the 11 printed queue.sh submits.
