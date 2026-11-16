@@ -595,7 +595,8 @@ class ZPKyTransferDiag(_ZPDiag):
       dtdBx_sq, dtupar_sq: one-step finite difference (backward: (now - previous
       step)/dt; curvy3d uses the step after the save).
       dBx_profile = -i ky Psi(0,0,ky), upar_profile = upar(0,0,ky) (k_y = 0..Ky;
-      instantaneous; curvy3d saves the run average, and adds dBx_profile twice).
+      instantaneous; curvy3d saves the run average, and adds dBx_profile twice in
+      its initial save only: curvy3d value = average + dBx(t_start)/N_saves).
       turb_*_sq_profile: (x,z)-averaged |u_perp|^2, dBpar^2, |dB_perp|^2, upar^2
       of the fields without the k_x = k_z = 0 line, Fourier coefficients in y.
       turb_char_wavenumbers (12), turb_alfvenic_comps (6): as curvy3d.

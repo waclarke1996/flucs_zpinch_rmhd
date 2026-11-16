@@ -294,10 +294,8 @@ def assess(a):
         m, e, _, _ = zr.mean_and_error(qg)
         if e / m > 0.10:
             reasons.append(f"rel. error {e / m:.2f} > 0.10")
-        z = zr.drift_z(qg)
-        h = len(qg) // 2
-        rd = abs(qg[h:].mean() - qg[:h].mean()) / m
-        if abs(z) > 3 and rd > 0.10:
+        z, rd = zr.drift_z(qg)          # (z, relative change of the half means): zpinch_runtools convention
+        if np.isfinite(z) and abs(z) > 3 and abs(rd) > 0.10:
             reasons.append(f"drift z {z:.1f}, {rd:.0%}")
         lab, eps = ts.classify(tg, qg, ts.QH, ts.QL)
         sw = sum(1 for x, y in zip(eps[:-1], eps[1:]) if x[0] != y[0])
@@ -444,6 +442,35 @@ def plan(a):
                f"<= {peak:.1f} GB (previous state + new restart per running job). Per run: T1 "
                f"{DISK_STATE['T1'] + DISK_OUT['T1'] * 5.5 + DISK_FIXED:.2f}, T2 "
                f"{DISK_STATE['T2'] + DISK_OUT['T2'] * 5.2 + DISK_FIXED:.2f} GB at ~550/520 R/vA.")
+    # per-output breakdown: MB on disk per 100 R/vA (T1 measured on realtest A2-T1-k8 t 0-500, du; T2 = T1 x the
+    # growth of the record size with nz: maps / kytavg x 2 (k_z bins), 1d / shells x 1.1, others unchanged)
+    per100 = [("0d (0.1)", 0.62, 0.62), ("1d spectra+profiles (1)", 2.42, 2.66), ("maps (5, 0.5-windows)", 1.39, 2.78),
+              ("kpar (5)", 0.04, 0.04), ("kyt (1)", 0.88, 0.88), ("kytavg streamer (25)", 1.35, 2.70),
+              ("shells (5)", 0.26, 0.29), ("slices (10)", 0.98, 0.98)]
+    L = dict(T1=550, T2=520)
+    out.append("")
+    out.append("DISK PER RUN (MB on disk; run lengths T1 550, T2 520 R/vA = mean t_init; apparent sizes in brackets)")
+    out.append(f"  {'item':28s} {'T1 /100RvA':>10s} {'T2 /100RvA':>10s} {'T1 run':>8s} {'T2 run':>8s}")
+    for n, x1, x2 in per100:
+        out.append(f"  {n:28s} {x1:10.2f} {x2:10.2f} {x1 * L['T1'] / 100:8.1f} {x2 * L['T2'] / 100:8.1f}")
+    o1, o2 = (sum(x[i] for x in per100) for i in (1, 2))
+    out.append(f"  {'run-time outputs, total':28s} {o1:10.2f} {o2:10.2f} {o1 * 5.5:8.1f} {o2 * 5.2:8.1f}")
+    out.append(f"  {'state.nc (one, float64)':28s} {'':10s} {'':10s} {'80 (273)':>8s} {'159 (545)':>8s}")
+    out.append(f"  {'summary .nc, no snapshot':28s} {'':10s} {'':10s} {2.1:8.1f} {2.1:8.1f}")
+    out.append(f"  {'summary snapshot (float32)':28s} {'':10s} {'':10s} {38.2:8.1f} {79.0:8.1f}")
+    out.append(f"  {'logs, inputs, timing':28s} {'':10s} {'':10s} {0.5:8.1f} {0.5:8.1f}")
+    t1 = 80 + o1 * 5.5 + 2.6
+    t2 = 159 + o2 * 5.2 + 2.6
+    out.append(f"  TOTAL kept, no snapshot: T1 {t1:.0f} MB, T2 {t2:.0f} MB (with snapshot {t1 + 38:.0f} / {t2 + 79:.0f}); "
+               f"T2 doubled by one extension (+500): {t2 + o2 * 5:.0f} MB; T2 at the cap (~1600 R/vA): "
+               f"{159 + o2 * 16 + 2.6:.0f} MB")
+    out.append("  CUTS: (1, adopted) summary without snapshot: -38/-79 MB, regenerable any time from state.nc "
+               "(flucs_summary_nc.py RUN, ~1 min). (2) zlib on state.nc: 0 on disk (ZFS already compresses the padded "
+               "zeros: 273 -> 80 MB); only smaller apparent size / copies (tools/compress_state.py, lossless, tested). "
+               "(3) optional, only if the quota is tighter than 0.3 GB/run at the cap: slices every 20 (-0.5 MB/100) "
+               "and kytavg windows 50 (-1.4/-2.7 MB/100). Not proposed: coarser maps (state-conditioned dissipation "
+               "maps need windows << two-state residence times) or fewer 0d/1d records (analysis inputs). Only ONE "
+               "state.nc per run (chain policy) and no other 3D data.")
     txt = "\n".join(out) + "\n"
     open(os.path.join(HERE, "campaign_plan.txt"), "w").write(txt)
     print(txt)

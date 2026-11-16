@@ -17,7 +17,8 @@ folder. Writes:
               (zeros = never written), so t_last_snapshot = end time. float32 unless --f8.
   log         written only if the chain finished (all segments exit 0, or an early stop) -> is_complete() True
   ky-transfer variables of curvy3d (dBx_sq ... [n_subcrit_modes, nt_subcrit], profiles and streamer maps = run
-              averages; NB curvy3d itself adds dBx_profile twice per save, here the true average) if present.
+              averages; here the true average. NB curvy3d adds dBx_profile twice in the initial save block of
+              solve() (solver l.2580/2583), once per later save: its value = mean + dBx(t_start)/N_saves) if present.
   attributes  run_id, source, git_commit (FLUCS hash of the run, from the input or run.log if found), gpu_name.
 """
 import argparse
