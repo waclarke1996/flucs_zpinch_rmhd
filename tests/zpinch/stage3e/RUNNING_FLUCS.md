@@ -138,3 +138,17 @@ $PY $C plan                                               # campaign_plan.txt (G
   state is deleted only afterwards). A killed job loses at most the running segment. `EARLY_STOP` ends a chain.
 - Analysis from run-time outputs only: `$PY runs/stage4a/f_analyse.py RUN` (statistics from t_sat + 50 by default);
   curvy3d-format summary for build_registry.py / make_flux_table.py: `$PY runs/tools/flucs_summary_nc.py RUN`. Then `build_registry.py RUN/<id>_summary.nc ...` (the summary FILES: given the run folder it also lists every raw FLUCS .nc as ERROR).
+
+## 7. Stage 4 production lanes (queue policy: keep the priority GPUs, 2026-11-16)
+- Create: `$PY runs/stage4a/campaign.py lanes ROOT [--only P10B04,...] [--workers h200:5,a100:3,rtx:3]` -> ROOT/<run_id>/
+  chains (auto_extend), ROOT/queue/todo/{T2,T1}/NN_<run_id> (longest first), ROOT/workers/W<stamp>-NN-<gpu>/; it prints
+  one `queue.sh submit --gpu <type> <worker>` per worker (4+1 h200, 2+1 a100, 2+1 rtx: one spare per type stays pending).
+- Each worker (lane_worker.sh) claims runs by atomic `mv` todo -> claimed, runs the chain to FINAL (extension rule
+  applied in the chain: campaign.py assess --apply), then claims the next; exits when nothing eligible is left.
+  rtx workers take only T1. Logs: worker run.log; per run chain.log, assess.log, FINAL, summary.log.
+- Status: `ls ROOT/queue/{todo/*,claimed,done,failed}`; `cat ROOT/queue/claimed/*.owner` (worker, job id, node).
+- Drain: `touch ROOT/queue/STOP_WORKERS` (workers exit after their current run). Restart: rm it, new `campaign.py lanes
+  ROOT` (only adds worker folders; existing runs/entries are kept) and submit.
+- A worker killed mid-run: its claim is adopted by the next worker once sacct reports the job ended; the chain resumes
+  from the last validated state. failed/: inspect ROOT/<run_id>/chain.log, fix, `mv` the entry back to todo/<tier>/.
+- Summary with snapshot for a run you want to plot: `flucs_summary_nc.py ROOT/<run_id>` (state.nc is kept).

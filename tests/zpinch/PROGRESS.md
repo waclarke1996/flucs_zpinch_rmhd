@@ -523,3 +523,35 @@ Storage: deleted stage3e/A2-T1-k8/t0500/restart.nc and realtest t0100-t0400 stat
 JOBS: 13134452 chaintest3 (runs/stage4a/chaintest3: chaintest2 rerun on a21eb61, ~1.5 min; PENDING at 05:51).
 TO DO ("continue: check chaintest3"): grep "FAIL count" runs/stage4a/chaintest3/run.log (expect 0 in all 8 phases, and
   no duplicate records). Then the campaign is ready; production only after Will's approval.
+
+## Stage 4a part 4 - lanes, disk, DIAGNOSTICS.md (2026-11-16), flucs zpinch @ 06f74a4 (+ this commit)
+chaintest3 rerun on a100 (chaintest3a, 13134604; 13134452 on h200 was cancelled): 0 FAIL in P1-P7, no duplicate
+  records after the a21eb61 trigger fix. git hash was empty on gpu08 (no git there): chain now reads .git directly.
+(1) LANES (Will's queue policy). One GPU job = one worker (runs/stage4a/lane_worker.sh) that claims runs from shared
+  to-do lists ROOT/queue/todo/{T2,T1} by atomic mv (longest first), runs each chain to FINAL and claims the next; exits
+  only when nothing eligible is left. Extension rule applied INSIDE the chain (chain_run.sh -> campaign.py assess
+  --apply: EXTEND adds segments and continues on the same GPU; FINAL -> summary .nc without snapshot). h200/a100 take
+  T2 then T1, rtx only T1. Workers 4+1 h200, 2+1 a100, 2+1 rtx = 11 jobs (queue.sh: MAX 8/4/4, MAX_ACTIVE is 16, not
+  20): 3 pending at all times (one per type) until a type runs out of work. Crashed worker: its claim is adopted by
+  the next worker once sacct reports the owner job ended. Two consecutive failures stop a worker. Drain:
+  ROOT/queue/STOP_WORKERS. Simulation (campaign_plan.txt): 2.68 days at t_init (lower bound 2.52, all 8 GPUs busy),
+  4.0 days with x1.5 lengths; h200 lanes 9 runs each, a100 2-3 (the longest T2 first), rtx 5-6 T1 (ends last).
+  Add up to 6 h if non-priority jobs hold GPUs at submission. Usage: RUNNING_FLUCS.md section 7.
+  BUG found by the lane test: assess (extension rule) crashed once statistics existed (drift_z returns (z, rel));
+  never exercised before. Fixed 06f74a4; assess checked on realtest (FINAL, <Q/Q_MHD> 0.089 +- 0.006 from t 70).
+  lanetest2 (13134623, tiny grid, shortened rule): fake orphan adopted; two workers at once, each run claimed once;
+  2-5 in-place extensions per run until FINAL; one state.nc + summary per run; records continuous (inspect 0 FAIL);
+  idle worker exits at once; restart from a zlib-compressed state validated.
+(2) DISK. /mnt/users is ZFS-compressed: a state.nc takes 80 MB (T1) / 159 MB (T2) on disk (apparent 273/545); outputs
+  and the summary snapshot do not compress. Breakdown per output type in campaign_plan.txt. Per run on disk:
+  outputs 7.9 (T1) / 11.0 (T2) MB per 100 R/vA; T1 126 MB, T2 219 MB at t_init without the summary snapshot (164/298
+  with it). Adopted cut: summaries without snapshot (regenerable from state.nc). zlib on state.nc saves nothing on
+  disk (ZFS already does it): tools/compress_state.py kept for copies. Optional if needed: slices every 20, kytavg 50.
+  Campaign: 10.4 GB (11.8 GB with x1.5), + <= 2.5 GB transient. A T2 run at the 1500 R/vA cap: 0.34 GB.
+  Quota: the message said "[FILL IN]" and `quota` is not installed: please give the free space.
+(3) DIAGNOSTICS.md (~/flucs_work; copy in flucs/tests/zpinch): formulas, code location, outputs, readers, verification
+  for energy and (a)-(h). Open points in its section 16. curvy3d adds dBx_profile twice only in its INITIAL save
+  (solver l.2580/2583), so its value = mean + dBx(t0)/N_saves, not 2 x mean; FLUCS and the summary always store the
+  true mean (no number affected; the two comments are corrected). The absolute sign of zp_shells transfers is checked
+  algebraically and against the plotters, not dynamically.
+STOP: production (campaign.py lanes runs/prod4 + 11 queue.sh submits) waits for Will's approval and the free quota.
