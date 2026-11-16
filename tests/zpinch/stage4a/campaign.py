@@ -65,12 +65,12 @@ ENERGY = '{name = "energy", options = {invariants = true, stop_dt_min = 1e-05, s
 CADENCE = {
     "production": [("0d", 0.1, None, [ENERGY, '{name = "zp_scalars"}']),
                    ("1d", 1.0, None, ['{name = "zp_spectra"}', '{name = "zp_profiles"}']),
-                   ("maps", 5.0, 0.5, ['{name = "zp_maps"}']), ("kpar", 5.0, None, ['{name = "zp_kpar"}']),
+                   ("maps", 5.0, 0.5, ['{name = "zp_maps"}', '{name = "zp_kxky"}']), ("kpar", 5.0, None, ['{name = "zp_kpar"}']),
                    ("slices", 10.0, None, ['{name = "zp_slices"}']), ("kyt", 1.0, None, ['{name = "zp_kytransfer"}']),
                    ("kytavg", 25.0, 1.0, ['{name = "zp_streamer_kzkx"}']), ("shells", 5.0, None, ['{name = "zp_shells"}'])],
     "test": [("0d", 0.1, None, [ENERGY, '{name = "zp_scalars"}']),
              ("1d", 1.0, None, ['{name = "zp_spectra"}', '{name = "zp_profiles"}']),
-             ("maps", 2.5, 0.5, ['{name = "zp_maps"}']), ("kpar", 2.5, None, ['{name = "zp_kpar"}']),
+             ("maps", 2.5, 0.5, ['{name = "zp_maps"}', '{name = "zp_kxky"}']), ("kpar", 2.5, None, ['{name = "zp_kpar"}']),
              ("slices", 5.0, None, ['{name = "zp_slices"}']), ("kyt", 1.0, None, ['{name = "zp_kytransfer"}']),
              ("kytavg", 5.0, 1.0, ['{name = "zp_streamer_kzkx"}']), ("shells", 2.5, None, ['{name = "zp_shells"}'])],
 }

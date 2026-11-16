@@ -198,7 +198,14 @@ def main():
     dkp, dkz = 2.0, 4.0
     # modes counted in the SAME bins as the energy: unit bins rint(k_perp / dk_y) (zp_spectra), then shells
     # rint(unit / 2) (counting by rint(k_perp / 2) directly put energy and mode counts in different shells)
-    pbin = np.rint(np.rint(kperp2d / (2 * np.pi / Ly)) / dkp).astype(int)
+    # unit bins as the file says: kperp_bin_edges (Paper 1 rule, outputs from 2026-11-16) or rint (older outputs)
+    f1 = files(segs, "output.1d.nc")
+    _, S1e = load_diag(f1[-1:], "zp_spectra", ["E_kperp"])
+    if "kperp_bin_edges" in S1e:
+        unit = np.searchsorted(np.asarray(S1e["kperp_bin_edges"])[1:], kperp2d, side="left")
+    else:
+        unit = np.rint(kperp2d / (2 * np.pi / Ly)).astype(int)
+    pbin = np.rint(unit / dkp).astype(int)
     cnt_p = np.bincount(pbin.ravel(), (wxy * nkz_modes).ravel())
     cnt_xy = (wxy).sum()
     t1, S1 = load_diag(files(segs, "output.1d.nc"), "zp_spectra")

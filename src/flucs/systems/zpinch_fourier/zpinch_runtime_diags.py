@@ -13,9 +13,19 @@ sample_time of the output, see zpinch_output.py):
   zp_scalars        (a) zonal/streamer fractions, shear, rms amplitudes,
                         Q_es/Q_em, energy-weighted k_z,rms in k_perp bands,
                         CFL (instantaneous and max since the last record)
-  zp_spectra        (b) 1D spectra in unit bins of k_perp, k_y and |k_z|
+  zp_spectra        (b) 1D spectra in unit bins of k_perp, k_y, |k_x| and |k_z|
+                        (energy parts and the Elsasser energies zplus, zminus,
+                        Zpplus, Zpminus = W_zeta+-, W_Z+-)
   zp_maps           (c) 2D (k_perp, |k_z|) unit-bin maps, window averages
                         (needs sample_time), float32
+  zp_kxky           (c') 2D (k_x, k_y) maps summed over k_z (E, W, Qhat), window
+                        averages (needs sample_time), float32
+
+k_perp unit bins (Paper 1 convention, kperp_bin_edges): width dk = 2 pi/L_y,
+bin j centred at j dk; bin 0 = {k_perp <= 0.5 min(2 pi/L_x, 2 pi/L_y)} (only
+k_perp = 0), bin j >= 1 = (e_{j-1}, e_j] with e_j = (j + 0.50001) dk: an exact
+half-integer k_perp goes to the LOWER bin. (np.rint, used before 2026-11-16 and
+still by the reference scripts, rounds half to even.)
   zp_kpar           (d) k_par(k_perp) accumulators as kpar_spectrum.py
   zp_profiles       (e) mean-field lines (k_y = k_z = 0 and k_x = k_z = 0),
                         complex Fourier coefficients of all four fields
@@ -68,6 +78,25 @@ def _fast_len(n):
             m += 1
 
 
+KP_EPS = 1e-5     # boundary tolerance in units of dk: exact edge values go to the lower bin/shell
+
+
+def kperp_bin_edges(dkx, dky, kperp_max):
+    """Upper edges e_0..e_{n-1} of the unit k_perp bins (module docstring): e_0 = 0.5 min(dkx, dky),
+    e_j = (j + 0.5 + KP_EPS) dky for j >= 1, up to the first edge >= kperp_max."""
+    e = [0.5 * min(dkx, dky)]
+    j = 1
+    while e[-1] < kperp_max:
+        e.append((j + 0.5 + KP_EPS) * dky)
+        j += 1
+    return np.array(e)
+
+
+def kperp_bin_index(kperp, upper_edges):
+    """bin of each k_perp (numpy): bin 0 = k <= e_0, bin j = (e_{j-1}, e_j]."""
+    return np.searchsorted(np.asarray(upper_edges), np.asarray(kperp), side="left")
+
+
 class ZPGrid:
     """Solved-mode geometry shared by the diagnostics (built once)."""
 
@@ -109,16 +138,23 @@ class ZPGrid:
         self.mx_np, self.my_np, self.mz_np = mx, my, mz
         self.mx, self.my, self.mz = (cp.asarray(a) for a in (mx, my, mz))
 
-        # unit bins (dk = 2 pi / L_y in k_perp and k_y, 2 pi / L_z in k_z)
-        ikp = np.rint(np.sqrt(kx_s**2 + ky_s**2) / self.dky).astype(np.int64)
-        self.n_kp = int(ikp.max()) + 1
+        # unit bins: k_perp (module docstring rule, dk = 2 pi/L_y), k_y and |k_x| (one bin per allowed value,
+        # widths 2 pi/L_y and 2 pi/L_x of the run's box), |k_z| (2 pi/L_z)
+        kp_s = np.sqrt(kx_s**2 + ky_s**2)
+        self.kp_upper = kperp_bin_edges(self.dkx, self.dky, kp_s.max())
+        ikp = kperp_bin_index(kp_s, self.kp_upper).astype(np.int64)
+        self.n_kp = len(self.kp_upper)
+        self.kp_edges = np.concatenate(([0.0], self.kp_upper))    # bin j = (kp_edges[j], kp_edges[j+1]]; bin 0 incl. 0
         self.n_ky = self.Ky + 1
+        self.n_kx = self.Kx + 1
         self.n_kz = self.Kz + 1
         self.ikp = cp.asarray(ikp)
         self.iky = self.my
+        self.ikx = cp.abs(self.mx)
         self.ikz = cp.abs(self.mz)
         self.kp_centers = np.arange(self.n_kp) * self.dky
         self.ky_centers = np.arange(self.n_ky) * self.dky
+        self.kx_centers = np.arange(self.n_kx) * self.dkx
         self.kz_centers = np.arange(self.n_kz) * self.dkz
 
         # mode sets
@@ -183,6 +219,17 @@ class ZPGrid:
         a2 = F.real**2 + F.imag**2
         return 0.5 * self.w * cp.stack(
             (self.k2 * a2[0], self.k2 * a2[1], self.c * a2[2], a2[3]))
+
+    def mode_elsasser(self, F):
+        """w-weighted Elsasser energies per mode (4, M): zplus = 1/2 k_perp^2 |Phi + Psi|^2, zminus (Phi - Psi),
+        Zpplus = 1/2 |upar + s dBpar|^2, Zpminus (upar - s dBpar), s = sqrt(c) = sqrt(1 + 1/kb) (curvy3d's
+        zetaplus/zetaminus/zparplus/zparminus). (zplus + zminus)/2 = E_uperp + E_bperp, (Zpplus + Zpminus)/2 =
+        E_dbpar + E_upar."""
+        sq = np.sqrt(self.c)
+        zp, zm = F[0] + F[1], F[0] - F[1]
+        Zp, Zm = F[3] + sq * F[2], F[3] - sq * F[2]
+        a = lambda z: z.real**2 + z.imag**2  # noqa: E731
+        return 0.5 * self.w * cp.stack((self.k2 * a(zp), self.k2 * a(zm), a(Zp), a(Zm)))
 
     def mode_heat_flux(self, F):
         """w-weighted Qhat per mode: (es, em), as ZPHeatFlux_Functor."""
@@ -306,10 +353,11 @@ class ZPScalarsDiag(_ZPDiag):
 class ZPSpectraDiag(_ZPDiag):
     name = "zp_spectra"
     option_defaults: ClassVar[dict[str, object]] = {}
-    kperp_names = ("E", "E_uperp", "E_bperp", "E_dbpar", "E_upar", "inj",
-                   "D_perp", "D_par", "Qhat", "Qhat_es", "Qhat_em", "kz2E")
-    ky_names = ("E", "Qhat", "Qhat_es", "Qhat_em")
-    kz_names = ("E", "inj", "D_perp", "D_par")
+    parts = ("E", "E_uperp", "E_bperp", "E_dbpar", "E_upar", "zplus", "zminus", "Zpplus", "Zpminus")
+    kperp_names = (*parts, "inj", "D_perp", "D_par", "Qhat", "Qhat_es", "Qhat_em", "kz2E")
+    ky_names = (*parts, "Qhat", "Qhat_es", "Qhat_em")
+    kx_names = ky_names
+    kz_names = ("E", "zplus", "zminus", "Zpplus", "Zpminus", "inj", "D_perp", "D_par")
 
     def init_vars(self) -> None:
         g = self.grid
@@ -317,25 +365,36 @@ class ZPSpectraDiag(_ZPDiag):
             self.add_var(_var(f"{n}_kperp", {"kperp": g.kp_centers}))
         for n in self.ky_names:
             self.add_var(_var(f"{n}_ky", {"ky": g.ky_centers}))
+        for n in self.kx_names:
+            self.add_var(_var(f"{n}_kx", {"kx": g.kx_centers}))
         for n in self.kz_names:
             self.add_var(_var(f"{n}_kz", {"kz": g.kz_centers}))
+        self.add_var(_var("kperp_bin_edges", {"kperp_edge": g.kp_edges}, time_dependent=False))
+
+    def ready(self) -> None:
+        super().ready()
+        self.save_data("kperp_bin_edges", self.grid.kp_edges)
 
     def execute(self) -> None:
         g = self.grid
         F = g.compact(self.system.get_fields())
         ep = g.mode_energy_parts(F)
         e = ep.sum(axis=0)
+        W = g.mode_elsasser(F)
         q_es, q_em = g.mode_heat_flux(F)
         inj = g.mode_injection(F)
         dperp, dpar = 2 * g.rate_perp * e, 2 * g.rate_par * e
         kp = {"E": e, "E_uperp": ep[0], "E_bperp": ep[1], "E_dbpar": ep[2],
-              "E_upar": ep[3], "inj": inj, "D_perp": dperp, "D_par": dpar,
+              "E_upar": ep[3], "zplus": W[0], "zminus": W[1], "Zpplus": W[2], "Zpminus": W[3],
+              "inj": inj, "D_perp": dperp, "D_par": dpar,
               "Qhat": q_es + q_em, "Qhat_es": q_es, "Qhat_em": q_em,
               "kz2E": g.kz2 * e}
         for n in self.kperp_names:
             self.save_data(f"{n}_kperp", g.binned(g.ikp, kp[n], g.n_kp).get())
         for n in self.ky_names:
             self.save_data(f"{n}_ky", g.binned(g.iky, kp[n], g.n_ky).get())
+        for n in self.kx_names:
+            self.save_data(f"{n}_kx", g.binned(g.ikx, kp[n], g.n_kx).get())
         for n in self.kz_names:
             self.save_data(f"{n}_kz", g.binned(g.ikz, kp[n], g.n_kz).get())
 
@@ -354,7 +413,12 @@ class ZPMapsDiag(_ZPWindowed):
         for n in self.map_names:
             self.add_var(_var(f"{n}_map", dims, dtype="f4", zlib=True))
         self.add_var(_var("n_samples"))
+        self.add_var(_var("kperp_bin_edges", {"kperp_edge": g.kp_edges}, time_dependent=False))
         self.reset_window()
+
+    def ready(self) -> None:
+        super().ready()
+        self.save_data("kperp_bin_edges", self.grid.kp_edges)
 
     def sample(self) -> None:
         g = self.grid
@@ -373,6 +437,45 @@ class ZPMapsDiag(_ZPWindowed):
         for name, acc in zip(self.map_names, self._acc):
             m = (acc / self._count).get().reshape(g.n_kp, g.n_kz)
             self.save_data(f"{name}_map", m.astype(np.float32))
+        self.save_data("n_samples", float(self._count))
+
+
+class ZPKxKyMapDiag(_ZPWindowed):
+    """
+    (k_x, k_y) maps summed over k_z, window averages (as zp_maps), float32, box-average convention (w = 2 at
+    k_y > 0, both members of the k_y = 0 pairs: the k_y = 0 row is symmetric in k_x). curvy3d's X_spec_calc =
+    sum_kz |X_k|^2 on its independent half (k_y = 0: k_x > 0 only, and k_z > 0 at k_x = 0), no 1/2, no k_perp^2,
+    no w: zplus_kxky = k_perp^2 zplus_spec_calc at k_y > 0; zplus_kxky(k_x) + zplus_kxky(-k_x) = k_perp^2
+    zplus_spec_calc(k_x) at k_y = 0, k_x > 0 (same for E with its parts and for Zp+- without k_perp^2).
+    """
+
+    name = "zp_kxky"
+    option_defaults: ClassVar[dict[str, object]] = {}
+    map_names = ("E", "zplus", "zminus", "Zpplus", "Zpminus", "Qhat")
+
+    def init_vars(self) -> None:
+        g = self.grid
+        dims = {"kx": (np.arange(g.nx_c) - g.Kx) * g.dkx, "ky": g.ky_centers}
+        for n in self.map_names:
+            self.add_var(_var(f"{n}_kxky", dims, dtype="f4", zlib=True))
+        self.add_var(_var("n_samples"))
+        self._b = (g.mx + g.Kx) * g.hy_c + g.my
+        self.reset_window()
+
+    def sample(self) -> None:
+        g = self.grid
+        F = g.compact(self.system.get_fields())
+        e = g.mode_energy_parts(F).sum(axis=0)
+        W = g.mode_elsasser(F)
+        q_es, q_em = g.mode_heat_flux(F)
+        n = g.nx_c * g.hy_c
+        self._accumulate([g.binned(self._b, x, n) for x in (e, W[0], W[1], W[2], W[3], q_es + q_em)])
+
+    def execute(self) -> None:
+        g = self.grid
+        for name, acc in zip(self.map_names, self._acc):
+            m = (acc / self._count).get().reshape(g.nx_c, g.hy_c)
+            self.save_data(f"{name}_kxky", m.astype(np.float32))
         self.save_data("n_samples", float(self._count))
 
 
@@ -406,6 +509,12 @@ class ZPKparDiag(_ZPDiag):
         edges = [0.25, 0.75] + [1.5 * 2**j for j in range(12)]
         self.shells = [(lo, hi) for lo, hi in zip(edges[:-1], edges[1:])
                        if lo < self.kperp_max]
+        # boundary rule of the unit bins (module docstring): shell = (lo', hi'], lo' = lo + KP_EPS dk (an exact edge
+        # value goes to the LOWER shell); the first lower edge is 0.5 min(dkx, dky) (0.25 for L_x = 4 pi), so only
+        # k_perp = 0 is outside. kpar_spectrum.py uses [lo, hi): different only for k_perp exactly on an edge.
+        tol = KP_EPS * g.dky
+        self.cuts = [(0.5 * min(g.dkx, g.dky) if i == 0 else lo + tol, hi + tol)
+                     for i, (lo, hi) in enumerate(self.shells)]
         dims = {"field": np.arange(4.0),
                 "shell": np.array([lo for lo, _ in self.shells])}
         for n in self.acc_names:
@@ -439,8 +548,8 @@ class ZPKparDiag(_ZPDiag):
         partner = np.array([pos[(-int(mz[i]), -int(mx[i]))] for i in zero])
         self.ky0 = cp.asarray(zero)
         self.ky0_partner = cp.asarray(partner)
-        self.masks = [((g.kperp >= lo) & (g.kperp < hi)) for lo, hi in self.shells]
-        self.lmasks = [(g.kperp < lo) for lo, _ in self.shells]
+        self.masks = [((g.kperp > lo) & (g.kperp <= hi)) for lo, hi in self.cuts]
+        self.lmasks = [(g.kperp <= lo) for lo, _ in self.cuts]
         self._setup = True
 
     def _real(self, Fk):
@@ -791,6 +900,7 @@ class ZPShellTransferDiag(_ZPDiag):
     elsasser = ("zplus", "zminus", "zparplus", "zparminus")
     magkin = ("Tuu", "TBu", "TBB", "TuB", "TBparBpar", "TuparBpar",
               "Tuparupar", "TBparupar")
+    energy_parts = ("uperp", "bperp", "dbpar", "upar")     # <st>_E_<part>[l]: shell energies (box averages)
 
     def init_vars(self) -> None:
         g = self.grid
@@ -831,6 +941,8 @@ class ZPShellTransferDiag(_ZPDiag):
             dims = {f"{st}_from": K[:-1], f"{st}_to": K[:-1]}
             for nm in self.outs:
                 self.add_var(_var(f"{st}_{nm}", dims))
+            for nm in self.energy_parts:
+                self.add_var(_var(f"{st}_E_{nm}", {f"{st}_to": K[:-1]}))
             ev = _var(f"{st}_K_boundaries", {f"{st}_edges": K}, time_dependent=False)
             self.add_var(ev)
 
@@ -895,9 +1007,12 @@ class ZPShellTransferDiag(_ZPDiag):
                 del Rj, jPhx, jPhy, jPsx, jPsy, jB, ju
             for nm in self.outs:
                 self.save_data(f"{st}_{nm}", res[nm])
+            ep = g.mode_energy_parts(Fc)
+            for i, nm in enumerate(self.energy_parts):
+                self.save_data(f"{st}_E_{nm}", cp.bincount(sid, weights=ep[i], minlength=n + 1)[:n].get())
 
 
 ZP_RUNTIME_DIAGS = {
-    ZPScalarsDiag, ZPSpectraDiag, ZPMapsDiag, ZPKparDiag, ZPProfilesDiag,
+    ZPScalarsDiag, ZPSpectraDiag, ZPMapsDiag, ZPKxKyMapDiag, ZPKparDiag, ZPProfilesDiag,
     ZPSlicesDiag, ZPKyTransferDiag, ZPStreamerTransferDiag, ZPShellTransferDiag,
 }

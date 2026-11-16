@@ -55,6 +55,22 @@ def duplicate_mask(t, period):
     return keep
 
 
+def kperp_bins(path, diag="zp_spectra"):
+    """
+    (centres, edges) of the k_perp unit bins of an output file (zp_spectra or zp_maps). Files written from
+    2026-11-16 store kperp_bin_edges (Paper 1 rule: bin 0 = {0}, bin j = (edges[j], edges[j+1]], exact
+    half-integers in the lower bin); older files used np.rint(k_perp / dk_y): their edges are returned as
+    (j - 0.5, j + 0.5) dk_y (rint's half-to-even ties are not represented).
+        c, e = kperp_bins("RUN/t0100/output.1d.nc"); bin_of_k = np.searchsorted(e[1:], kperp, side="left")
+    """
+    t, d = load_diag(path, diag, names=["E_kperp" if diag == "zp_spectra" else "E_map"])
+    c = np.asarray(d["kperp"], float)
+    if "kperp_bin_edges" in d:
+        return c, np.asarray(d["kperp_bin_edges"], float)
+    dk = c[1] - c[0]
+    return c, np.concatenate(([0.0], c + 0.5 * dk))
+
+
 def load_diag(paths, diag, names=None, dedup=True):
     """
     Concatenate the time-dependent variables of one diagnostic over files.
