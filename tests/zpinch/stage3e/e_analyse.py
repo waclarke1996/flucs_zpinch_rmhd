@@ -106,12 +106,20 @@ def label_at(tt):
 
 
 # ---------------- 2. states, direct ----------------
+def state_file(s):
+    """Stage 4 chains keep the validated state as state.nc; Stage 3e chains as restart.nc."""
+    for nm in ("state.nc", "restart.nc"):
+        if os.path.exists(f"{s}/{nm}"):
+            return f"{s}/{nm}"
+    return None
+
+
 states = []
 shape = None
 finished = [s for s in done if os.path.exists(f"{s}/run.log") and "given in" in open(f"{s}/run.log").read()]
 for s in finished:   # a running segment's restart.nc is an intermediate write
-    f = f"{s}/restart.nc"
-    if not os.path.exists(f):
+    f = state_file(s)
+    if f is None:
         continue
     with Dataset(f) as ds:
         tt = float(ds["current_time"][...]) + a.t_offset
@@ -173,7 +181,7 @@ if not a.no_dmap and states:
     sd = f"{RUN}_state"
     os.makedirs(sd, exist_ok=True)
     nc = f"{sd}/{name}.nc"
-    rs = [f"{s}/restart.nc" for s in finished]
+    rs = [state_file(s) for s in finished if state_file(s)]
     def convert():
         if os.path.exists(nc):
             return

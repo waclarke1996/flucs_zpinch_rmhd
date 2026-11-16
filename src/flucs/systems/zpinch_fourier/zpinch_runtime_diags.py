@@ -671,7 +671,8 @@ class ZPKyTransferDiag(_ZPDiag):
         Nu_r = 1j * ky * P1[line]
         Nu_m = -1j * ky * P2[line]
         a2 = lambda z: z.real**2 + z.imag**2
-        dt = float(s.current_dt)
+        # one-step differences need a previous step: NaN at step 0
+        dt = float(s.current_dt) if int(s.current_step) > 0 else float("nan")
         dBx_sq = 0.5 * ky**2 * a2(psi)
         upar_sq = 0.5 * a2(uu)
         vals = {

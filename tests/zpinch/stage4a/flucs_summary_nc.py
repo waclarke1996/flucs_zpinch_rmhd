@@ -73,9 +73,19 @@ def series_0d(segs):
     return t[keep], es[keep], em[keep], dt[keep]
 
 
+def state_file(seg):
+    """validated final state of a Stage 4 chain segment (state.nc), else a Stage 3e restart.nc."""
+    for nm in ("state.nc", "restart.nc"):
+        if os.path.exists(os.path.join(seg, nm)):
+            return os.path.join(seg, nm)
+    return None
+
+
 def finished(segs, run):
     if os.path.exists(os.path.join(run, "EARLY_STOP")):
         return True, "early stop: " + open(os.path.join(run, "EARLY_STOP")).read().strip()
+    if os.path.exists(os.path.join(segs[-1], "SEG_OK")):
+        return True, "all segments finished (SEG_OK)"
     last = os.path.join(segs[-1], "run.log")
     if os.path.exists(last) and "flucs given in" in open(last, errors="ignore").read():
         return True, "all segments finished"
@@ -106,6 +116,11 @@ def main():
     inr = (thf >= t[0] - 0.5 * hf_dt) & (thf <= t_end + 0.5 * hf_dt)
     kP, kb = float(p["kP"]), float(p["kb"])
     pref = kP * (1 + kb) - 2.0
+    # no interpolation across gaps of the 0d series (a missing segment): grid points farther than 1.5 hf_dt from
+    # the nearest record are NaN
+    jn = np.clip(np.searchsorted(t, thf), 1, len(t) - 1)
+    gap = np.minimum(np.abs(t[jn] - thf), np.abs(t[jn - 1] - thf))
+    inr &= gap <= 1.5 * hf_dt
     hf = np.where(inr, np.interp(thf, t, es) * pref / (2.0 * (1 + kb)), np.nan)
     hfe = np.where(inr, np.interp(thf, t, em) * kP / 2.0, np.nan)
     j = np.clip(np.searchsorted(t, thf), 0, len(t) - 1)
@@ -113,7 +128,9 @@ def main():
 
     snap = None
     if not a.no_snapshot:
-        rp = os.path.join(segs[-1], "restart.nc")
+        rp = state_file(segs[-1])
+        if rp is None:
+            raise SystemExit(f"no state.nc / restart.nc in {segs[-1]}: use --no-snapshot")
         X, t_state, _ = read_state(rp)
         snap, left = to_compact(X)
         if left != 0.0:
@@ -129,7 +146,22 @@ def main():
     kyt = None
     if kyt_files:
         tk, kyt = load_diag(kyt_files, "zp_kytransfer")
-        kyt_dt = float(np.median(np.diff(tk))) if len(tk) > 1 else 1.0
+        kyt_dt = float(f"{np.median(np.diff(tk)):.3g}") if len(tk) > 1 else 1.0    # nominal save_time
+        # curvy3d's subcrit series has no time variable: record i is at t = i * subcrit_mode_hfmult * save_time_hf
+        # from t = 0 (plot3d_rmhd_zpinch.py). Put the records on that grid; NaN where there is no record (e.g. the
+        # segments before the ky-transfer output was switched on).
+        ngrid = int(np.floor(tk[-1] / kyt_dt + 0.5)) + 1
+        gi = np.rint(tk / kyt_dt).astype(int)
+        if np.max(np.abs(tk - gi * kyt_dt)) > 0.1 * kyt_dt or len(np.unique(gi)) != len(gi):
+            raise SystemExit("zp_kytransfer records are not on a regular time grid")
+        for k in list(kyt):
+            v = kyt[k]
+            if np.ndim(v) >= 1 and k not in ("ky_mode", "ky_profile", "turb_wavenumber_measurements",
+                                             "turb_alfvenic_comps_measurements"):
+                g = np.full((ngrid,) + v.shape[1:], np.nan, dtype=v.dtype)
+                g[gi] = v
+                kyt[k] = g
+        print(f"ky-transfer: {len(tk)} records on a grid of {ngrid} (t = i x {kyt_dt:g}, first record t = {tk[0]:.3f})")
         st_files = [os.path.join(s, "output.kytavg.nc") for s in segs
                     if os.path.exists(os.path.join(s, "output.kytavg.nc"))]
         streamer = load_diag(st_files, "zp_streamer_kzkx")[1] if st_files else None
@@ -208,7 +240,7 @@ def main():
                 ds.createVariable(nm, "f8", ("n_subcrit_modes", "nt_subcrit"))[:] = kyt[nm].T
             for nm in ("dBx_profile", "upar_profile", "turb_uperp_sq_profile", "turb_dBpar_sq_profile",
                        "turb_dBperp_sq_profile", "turb_upar_sq_profile"):
-                m = kyt[nm].mean(axis=0)
+                m = np.nanmean(kyt[nm], axis=0)
                 ds.createVariable(nm + "_r", "f8", ("half_ny",))[:] = m.real
                 ds.createVariable(nm + "_i", "f8", ("half_ny",))[:] = m.imag
             ds.createDimension("turb_wavenumber_measurements", 12)

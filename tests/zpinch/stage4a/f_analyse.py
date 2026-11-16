@@ -2,7 +2,12 @@
 """Stage 4a: analysis of one FLUCS production run from its RUN-TIME outputs only (no 3D states, no conversion).
 Successor of runs/stage3e/e_analyse.py (same series / two-state / pass-fail logic and criteria).
 
-  python f_analyse.py RUN [--t0 100] [--win-frac 0.8]      -> RUN/analysis.txt (also stdout)
+  python f_analyse.py RUN [--t0 auto|T] [--win-frac 0.8] [--at-times t1,t2,..]   -> RUN/analysis.txt (also stdout)
+
+--t0 auto (default): statistics from t0 = t_sat + 50 (rounded up to 10), t_sat = first time Q/Q_MHD reaches half its
+median over the second half of the run (t_saturation(); the campaign extension rule uses the same).
+--at-times: spectra, zp_scalars and k_par only from the records at these times (|dt| < 0.05), e.g. the snapshot
+times of e_analyse.py, for a like-for-like comparison (maps are window averages and stay as they are).
 
 RUN = folder with segments t????/ (or a single run folder). Uses
   output.0d.nc   energy (Q/Q_MHD, E, E_kx0, dt) + zp_scalars       -> series, runaway, two-state labels (tools/two_state.py)
@@ -47,6 +52,21 @@ def growth_rate_max(kb, kP):     # as dissipation_map.py / kpar_spectrum.py
     return gam
 
 
+def t_saturation(t, q, frac=0.5):
+    """first time Q reaches frac x median(Q over the second half of the series); nan if never."""
+    t, q = np.asarray(t, float), np.asarray(q, float)
+    ok = np.isfinite(q)
+    t, q = t[ok], q[ok]
+    late = np.median(q[t >= t[0] + 0.5 * (t[-1] - t[0])])
+    i = np.flatnonzero(q >= frac * late)
+    return float(t[i[0]]) if i.size and late > 0 else np.nan
+
+
+def auto_t0(t, q):
+    ts_ = t_saturation(t, q)
+    return ts_, (np.ceil((ts_ + 50.0) / 10.0) * 10.0 if np.isfinite(ts_) else np.nan)
+
+
 def files(segs, name):
     return [f"{s}/{name}" for s in segs if os.path.exists(f"{s}/{name}")]
 
@@ -54,8 +74,9 @@ def files(segs, name):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("run")
-    ap.add_argument("--t0", type=float, default=100.0)
+    ap.add_argument("--t0", default="auto")
     ap.add_argument("--win-frac", type=float, default=0.8)
+    ap.add_argument("--at-times", default="")
     a = ap.parse_args()
     RUN = os.path.abspath(a.run.rstrip("/"))
     name = os.path.basename(RUN)
@@ -70,7 +91,7 @@ def main():
     dim, par, hyp = inp["dimensions"], inp["parameters"], inp["hyperdissipation"]
     Lx, Ly, Lz = float(dim.get("Lx", 4 * np.pi)), float(dim.get("Ly", 2 * np.pi)), float(dim.get("Lz", 2 * np.pi))
     kb, kp = float(par["kb"]), float(par["kP"])
-    Kx, Ky, Kz = (int(dim[k]) - 1) // 3 for k in ("nx", "ny", "nz"))
+    Kx, Ky, Kz = ((int(dim[k]) - 1) // 3 for k in ("nx", "ny", "nz"))
     p, q = int(hyp["kperp_power"]), int(hyp["kz_power"])
     nup, nuz = float(hyp["kperp"]), float(hyp["kz"])
     say(f"== {name}: kb {kb} kP {kp}; padded {dim['nx']} x {dim['ny']} x {dim['nz']}; nu_perp {nup} (k^{2 * p}), "
@@ -99,7 +120,16 @@ def main():
     say(f"segments {len(f0)}/{len(segs)}, t {t[0]:.1f}-{t[-1]:.1f}; {steps} steps, wall {wall / 3600:.2f} h "
         f"({1e3 * wall / max(steps, 1):.1f} ms/step); min dt {np.nanmin(dts):.2e}; EARLY_STOP: {early or 'none'}")
     runaway = bool(early) or np.nanmin(dts) < 1e-5
-    t0 = max(a.t0, t[0])
+    t_sat, t0_auto = auto_t0(t, qq)
+    t0 = max(t0_auto if a.t0 == "auto" else float(a.t0), t[0])
+    say(f"saturation t_sat {t_sat:.1f} (Q first >= 0.5 x late median) -> auto t0 {t0_auto:.0f}; using t0 = {t0:.1f}")
+    at = np.array([float(x) for x in a.at_times.split(",") if x.strip()])
+
+    def near(tt):
+        tt = np.asarray(tt, float)
+        if not at.size:
+            return np.ones(tt.shape, bool)
+        return np.min(np.abs(tt[:, None] - at[None, :]), axis=1) < 0.05
     tg = np.arange(np.ceil(t0 / ts.DT) * ts.DT, t[-1] + 1e-9, ts.DT)
     ok = np.isfinite(qq) & np.isfinite(E)
     qg, Eg = np.interp(tg, t[ok], qq[ok]), np.interp(tg, t[ok], E[ok])
@@ -131,9 +161,10 @@ def main():
         return 0
 
     # zp_scalars state means
-    ts0 = t[(t >= t0)]
+    s0 = (t >= t0) & near(t)
+    ts0 = t[s0]
     lab0 = np.array([label_at(x) for x in ts0])
-    sc ={k: np.asarray(v)[o][(t >= t0)] for k, v in dt0.items() if np.ndim(v) == 1 and len(v) == len(d0["E"])}
+    sc = {k: np.asarray(v)[o][s0] for k, v in dt0.items() if np.ndim(v) == 1 and len(v) == len(d0["E"])}
     bands = sorted(k for k in sc if k.startswith("kzrms_"))
     say("\nzp_scalars, state means (t >= t0): st  n  b_rms u_rms E_ky0/E E_ky0kz0/E S_zon0 S_zon,all W_rms cfl_max | "
         + " ".join(b.replace("kzrms_", "kz[") + "]" for b in bands))
@@ -158,7 +189,9 @@ def main():
     kzm = Kz * 2 * np.pi / Lz
     nkz_modes = len(mz)
     dkp, dkz = 2.0, 4.0
-    pbin = np.rint(kperp2d / dkp).astype(int)
+    # modes counted in the SAME bins as the energy: unit bins rint(k_perp / dk_y) (zp_spectra), then shells
+    # rint(unit / 2) (counting by rint(k_perp / 2) directly put energy and mode counts in different shells)
+    pbin = np.rint(np.rint(kperp2d / (2 * np.pi / Ly)) / dkp).astype(int)
     cnt_p = np.bincount(pbin.ravel(), (wxy * nkz_modes).ravel())
     cnt_xy = (wxy).sum()
     t1, S1 = load_diag(files(segs, "output.1d.nc"), "zp_spectra")
@@ -173,7 +206,7 @@ def main():
         return float(max(sp[i] / sp[:i].min() for i in range(1, len(sp))))
 
     spec_rows = {}
-    sel1 = t1 >= t0
+    sel1 = (t1 >= t0) & near(t1)
     l1 = np.array([label_at(x) for x in t1])
     for st in (1, -1, 0):
         m = sel1 & (l1 == st)
@@ -245,7 +278,7 @@ def main():
         lk = np.array([label_at(x) for x in tk])
         say("\nk_par per state (zp_kpar records; energy-weighted over fields: kz_rms / k_par / k_par,< / k_par,wrong ; chi_Phi)")
         for st in (1, -1, 0):
-            sel = (tk >= t0) & (lk == st)
+            sel = (tk >= t0) & (lk == st) & near(tk)
             if not sel.any():
                 continue
             T = kpar_table(fk_, mask=lambda tt, s=sel: s)

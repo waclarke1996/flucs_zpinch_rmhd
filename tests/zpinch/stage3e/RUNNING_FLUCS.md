@@ -122,3 +122,19 @@ energy / dissipation and pile-up in k_perp and k_z, b_rms, the two cut-offs, two
 ```bash
 $PY runs/stage3e/e_analyse.py runs/stage3e/A3a-T2-k8 [--t0 100] [--t-offset 0] [--no-dmap] [--keep-nc]
 ```
+
+## 6. Stage 4 production chains (runs/stage4a/campaign.py, chain_run.sh)
+```
+PY=~/flucs_work/.venv/bin/python; C=~/flucs_work/runs/stage4a/campaign.py
+$PY $C make runs/<new>/P07B05-T2-k8 --point P07B05     # chain folder: point.json, run.sh, t0100..t<t_init>/input.toml
+~/flucs_work/queue.sh submit runs/<new>/P07B05-T2-k8      # one job = the whole chain (resubmit the same folder to continue)
+$PY $C assess runs/<new>/P07B05-T2-k8                    # extension rule: FINAL, or the exact 'extend' command to run
+$PY $C extend runs/<new>/P07B05-T2-k8 --t-end 1000       # adds segments; resubmit the folder
+$PY $C plan                                               # campaign_plan.txt (GPU-h per GPU type, wall days, disk)
+```
+- Segments of 100 R/vA; production cadence of the run-time outputs (0d 0.1, 1d/kyt 1, maps/kpar/shells 5, slices 10,
+  kytavg 25 R/vA); white noise 1e-5 seed 257. Only the latest VALIDATED state is kept: `tEEEE/state.nc` + `SEG_OK`
+  (FLUCS writes restart.nc; tools/check_state.py checks grid, finite values and time before it is renamed; the previous
+  state is deleted only afterwards). A killed job loses at most the running segment. `EARLY_STOP` ends a chain.
+- Analysis from run-time outputs only: `$PY runs/stage4a/f_analyse.py RUN` (statistics from t_sat + 50 by default);
+  curvy3d-format summary for build_registry.py / make_flux_table.py: `$PY runs/tools/flucs_summary_nc.py RUN`.

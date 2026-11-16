@@ -182,7 +182,9 @@ class ZPinchEnergyDiag(FlucsDiagnostic):
                 for j in range(len(system.hyperdissipation_components))
             )
             W_prev = self.get_inv(fields_prev, w, np.int32(0)).get().item()
-            dWdt = (W - W_prev) / current_dt
+            # no previous step at step 0 (first record of a run): NaN
+            dWdt = ((W - W_prev) / current_dt
+                    if int(system.current_step) > 0 else float("nan"))
             self.save_data(n, W)
             self.save_data(f"{n}_inj", inj)
             self.save_data(f"{n}_exch", exch)
@@ -281,7 +283,8 @@ class ZPinchEnergyDiag(FlucsDiagnostic):
         self.save_data("D", D)
 
         E_prev = self.get_E(fields_prev, minus_one).get().item()
-        dEdt = (E - E_prev) / current_dt
+        # no previous step at step 0 (first record of a run): NaN
+        dEdt = (E - E_prev) / current_dt if current_step > 0 else float("nan")
         self.save_data("dEdt", dEdt)
         self.save_data("budget_error", dEdt - (injection - D))
 
