@@ -48,6 +48,16 @@ NU_PERP = 4e-11
 T_INIT = 500.0
 SEG = 100.0
 T_SAT_C, T_STAT, T_STAT_MAX, EXT = 15.0, 400.0, 1500.0, 500.0
+T0_OFFSET = 50.0       # statistics from t_sat + T0_OFFSET (rounded up to 10), as f_analyse --t0 auto
+# tiny-grid tests only: CAMPAIGN_TEST_RULE="T_STAT,T_STAT_MAX,EXT,T0_OFFSET" overrides the extension rule
+if os.environ.get("CAMPAIGN_TEST_RULE"):
+    T_STAT, T_STAT_MAX, EXT, T0_OFFSET = (float(x) for x in os.environ["CAMPAIGN_TEST_RULE"].split(","))
+LANE = os.path.join(HERE, "lane_worker.sh")
+# on-disk sizes (ZFS compresses the padded zeros of a state; outputs are incompressible): measured 2026-11-16
+DISK_STATE = dict(T1=0.080, T2=0.159, T3=0.24)      # GB on disk per state.nc (T3 scaled)
+DISK_OUT = dict(T1=0.0079, T2=0.0110, T3=0.0141)    # GB per 100 R/vA, all run-time outputs (T1 measured, T2/T3 scaled)
+DISK_SNAP = dict(T1=0.038, T2=0.079, T3=0.118)     # GB: float32 snapshot in a summary .nc (optional)
+DISK_FIXED = 0.003                                 # GB per run: summary without snapshot, logs, inputs
 AMP, SEED = 1e-5, 257
 CHAIN = os.path.join(HERE, "chain_run.sh")
 ENERGY = '{name = "energy", options = {invariants = true, stop_dt_min = 1e-05, stop_persist_time = 5.0}}'
@@ -220,7 +230,7 @@ def make(a):
     cfg = dict(run_id=rid, kP=kP, kb=kb, tier=tier, nx=T["nx"], ny=T["ny"], nz=T["nz"],
                nu_perp=a.nu_perp if a.nu_perp is not None else NU_PERP,
                nu_z=a.nu_z if a.nu_z is not None else T["nu_z"], seg=a.seg, cadence=a.cadence,
-               amplitude=AMP, seed=SEED, gamma_damped=round(gd, 4))
+               amplitude=AMP, seed=SEED, gamma_damped=round(gd, 4), auto_extend=bool(a.auto_extend))
     t_end = t_initial(gd, a.seg) if a.t_end == "auto" else float(a.t_end)
     cfg["t_init"] = t_end
     os.makedirs(run)
@@ -249,23 +259,32 @@ def assess(a):
     sys.path.insert(0, os.path.expanduser("~/flucs_work/flucs/src"))
     import two_state as ts
     import zpinch_runtools as zr
-    from f_analyse import auto_t0
+    from f_analyse import t_saturation
     from flucs.systems.zpinch_fourier.zpinch_readers import load_diag
     run = os.path.abspath(a.run)
     cfg = json.load(open(os.path.join(run, "point.json")))
     segs = seg_names(run)
     done = [x for x in segs if os.path.exists(os.path.join(run, x, "SEG_OK"))]
     if os.path.exists(os.path.join(run, "EARLY_STOP")):
-        print(f"{cfg['run_id']}: EARLY_STOP ({open(os.path.join(run, 'EARLY_STOP')).read().strip()}) -> final")
-        return
+        return _verdict(a, run, cfg, "FINAL", None, f"{cfg['run_id']}: EARLY_STOP "
+                        f"({open(os.path.join(run, 'EARLY_STOP')).read().strip()}) -> FINAL")
     if len(done) < len(segs):
         print(f"{cfg['run_id']}: {len(done)}/{len(segs)} segments done -> resubmit (not finished)")
+        if getattr(a, "apply", False):
+            raise SystemExit(2)
         return
     t, d = load_diag([os.path.join(run, x, "output.0d.nc") for x in done], "energy", ["Q_over_QMHD"])
     o = np.argsort(t, kind="stable")
     t, q = t[o], d["Q_over_QMHD"][o]
-    t_sat, t_s = auto_t0(t, q)
+    t_sat = t_saturation(t, q)
     t_end = float(t[-1])
+    if not np.isfinite(t_sat):
+        if t_end >= T_STAT_MAX - 1e-6:
+            return _verdict(a, run, cfg, "FINAL", None, f"{cfg['run_id']}: not saturated by t = {t_end:.0f}; FINAL (cap)")
+        new_end = float(np.ceil(min(t_end + EXT, T_STAT_MAX) / cfg["seg"] - 1e-9) * cfg["seg"])
+        return _verdict(a, run, cfg, "EXTEND", new_end, f"{cfg['run_id']}: not saturated by t = {t_end:.0f}; "
+                        f"EXTEND to {new_end:g}")
+    t_s = float(np.ceil((t_sat + T0_OFFSET) / 10.0) * 10.0)
     tg = np.arange(t_s, t_end + 1e-9, ts.DT)
     qg = np.interp(tg, t, q)
     reasons = []
@@ -291,11 +310,34 @@ def assess(a):
     if reasons and t_end < cap - 1e-6:
         target = t_s + T_STAT if t_end - t_s < T_STAT else t_end + EXT
         new_end = float(np.ceil(min(target, cap) / cfg["seg"] - 1e-9) * cfg["seg"])
-        print(f"{cfg['run_id']}: t_sat {t_sat:.1f}, stats from {t_s:g} to {t_end:.0f}; {info}; EXTEND to {new_end:g} "
-              f"({'; '.join(reasons)}):  python campaign.py extend {run} --t-end {new_end:g}")
-    else:
-        print(f"{cfg['run_id']}: t_sat {t_sat:.1f}, stats from {t_s:g} to {t_end:.0f}; {info}; FINAL"
-              + (f" (cap t_s + {T_STAT_MAX:g} reached; open: {'; '.join(reasons)})" if reasons else ""))
+        return _verdict(a, run, cfg, "EXTEND", new_end, f"{cfg['run_id']}: t_sat {t_sat:.1f}, stats from {t_s:g} to "
+                        f"{t_end:.0f}; {info}; EXTEND to {new_end:g} ({'; '.join(reasons)})")
+    return _verdict(a, run, cfg, "FINAL", None, f"{cfg['run_id']}: t_sat {t_sat:.1f}, stats from {t_s:g} to {t_end:.0f}; "
+                    f"{info}; FINAL" + (f" (cap t_s + {T_STAT_MAX:g} reached; open: {'; '.join(reasons)})" if reasons else ""))
+
+
+def _verdict(a, run, cfg, what, new_end, msg):
+    """print the verdict; with --apply (used by chain_run.sh on the node): EXTEND -> add the segments up to new_end
+    and exit 10; FINAL -> write RUN/FINAL and exit 0. Every verdict is appended to RUN/assess.log."""
+    import datetime
+    import sys
+    print(msg)
+    with open(os.path.join(run, "assess.log"), "a") as fh:
+        fh.write(f"{datetime.datetime.now().isoformat(timespec='seconds')} {msg}\n")
+    if not getattr(a, "apply", False):
+        if what == "EXTEND":
+            print(f"   -> python campaign.py extend {run} --t-end {new_end:g}")
+        return
+    if what == "EXTEND":
+        new = add_segments(run, cfg, new_end)
+        if new:
+            print(f"   applied: added {len(new)} segments {new[0]}..{new[-1]}")
+            sys.exit(10)
+        msg += " -- no segment added (target not beyond the last segment): FINAL"
+        print(msg)
+    with open(os.path.join(run, "FINAL.tmp"), "w") as fh:
+        fh.write(msg + "\n")
+    os.replace(os.path.join(run, "FINAL.tmp"), os.path.join(run, "FINAL"))
 
 
 def steps_per_rva(n0sq):
@@ -304,63 +346,153 @@ def steps_per_rva(n0sq):
     return max(1100.0, 1270.0 * n0sq - 425.0)
 
 
-def plan(a):
-    rows = points(write=False)
+def read_speed(path):
     sp = {}
-    for line in open(a.speed):
+    for line in open(path):
         if line.startswith("#") or not line.strip():
             continue
         tier, gpu, ms = line.split()[:3]
         sp[(tier, gpu)] = float(ms)
-    gpus = sorted({g for _, g in sp}, key=lambda g: ["h200", "a100", "rtx"].index(g) if g in
-                  ("h200", "a100", "rtx") else 9)
-    slots = dict(h200=4, a100=2, rtx=2)
-    disk_state = dict(T1=0.27, T2=0.55, T3=0.82)      # GB apparent per kept state.nc (T1/T2 measured)
-    disk_out = 0.175                                   # GB per 1000 R/vA run-time outputs (T2 measured, 10 R/vA)
-    jobs, out = [], []
-    for r in rows:
+    return sp
+
+
+GPU_N = dict(h200=4, a100=2, rtx=2)             # physical GPUs with Will's priority (sinfo 2026-11-16)
+CLASSES = dict(h200="T2 T1", a100="T2 T1", rtx="T1")   # which to-do lists a worker on that GPU type takes, in order
+
+
+def jobs_with_cost(sp):
+    jobs = []
+    for r in points(write=False):
         tier, n0 = r["tier"], float(r["N0sq"])
         tin = t_initial(float(r["gamma_damped"]))
         nst = steps_per_rva(n0) * tin
-        h = {g: nst * sp[(tier, g)] / 3.6e6 for g in gpus if (tier, g) in sp}
+        h = {g: nst * sp[(tier, g)] / 3.6e6 for g in GPU_N if (tier, g) in sp}
         jobs.append(dict(r, t_init=tin, steps=nst, h=h, extrap=n0 > 2.56))
+    return jobs
+
+
+def simulate_lanes(jobs, ext=1.0, gpu_n=GPU_N):
+    """the lane workers' policy (lane_worker.sh): each GPU, when free, claims the longest remaining run (by H200
+    cost) from its first non-empty class list (CLASSES) and runs it to the end (in-chain extensions: duration x ext).
+    Returns makespan (h), per-GPU [(run_id, start, end)], per-type time at which its lists are exhausted."""
+    import heapq
+    todo = {c: sorted([j for j in jobs if j["tier"] == c], key=lambda j: -j["h"]["h200"]) for c in ("T1", "T2")}
+    free = [(0.0, g, k) for g in gpu_n for k in range(gpu_n[g])]
+    heapq.heapify(free)
+    lanes = {(g, k): [] for g in gpu_n for k in range(gpu_n[g])}
+    end = {}
+    while free:
+        t, g, k = heapq.heappop(free)
+        j = next((todo[c].pop(0) for c in CLASSES[g].split() if todo[c]), None)
+        if j is None:
+            end[(g, k)] = t
+            continue
+        d = j["h"][g] * ext
+        lanes[(g, k)].append((j["run_id"], t, t + d))
+        heapq.heappush(free, (t + d, g, k))
+    return max(end.values()), lanes, end
+
+
+def plan(a):
+    sp = read_speed(a.speed)
+    jobs = jobs_with_cost(sp)
+    gpus = list(GPU_N)
     tot = {g: sum(j["h"].get(g, 0) for j in jobs) for g in gpus}
-    out.append(f"# campaign plan (campaign.py plan, speed file {a.speed}); {len(jobs)} points, initial lengths only "
-               f"(extensions: + up to {EXT:g} R/vA each when the rule asks; budget +50 % below)")
-    out.append("# GPU-h per point = steps_per_rva(N0^2) x t_init x ms/step; '*' = N0^2 > 2.56 (extrapolated cost)")
-    out.append("run_id            tier  N0^2  gamma_d t_init  steps/RvA " + " ".join(f"{g + '_h':>7s}" for g in gpus))
+    out = [f"# campaign plan (campaign.py plan, speed file {a.speed}); {len(jobs)} points, initial lengths "
+           f"(in-chain extensions: + {EXT:g} R/vA per step of the rule; '+50 %' rows assume 1.5 x every run)",
+           "# GPU-h per point = steps_per_rva(N0^2) x t_init x ms/step; '*' = N0^2 > 2.56 (extrapolated cost); "
+           "disk_GB = on-disk per run at t_init (state + outputs + summary without snapshot)",
+           "run_id            tier  N0^2  gamma_d t_init  steps/RvA " + " ".join(f"{g + '_h':>7s}" for g in gpus)
+           + "  disk_GB"]
     for j in jobs:
+        dk = DISK_STATE[j["tier"]] + DISK_OUT[j["tier"]] * j["t_init"] / 100 + DISK_FIXED
         out.append(f"{j['run_id']:17s} {j['tier']}  {float(j['N0sq']):5.2f}  {float(j['gamma_damped']):.3f} "
                    f"{j['t_init']:6.0f} {steps_per_rva(float(j['N0sq'])):9.0f}{'*' if j['extrap'] else ' '} "
-                   + " ".join(f"{j['h'].get(g, np.nan):7.1f}" for g in gpus))
-    out.append("TOTAL GPU-h if all on one type: " + ", ".join(f"{g} {tot[g]:.0f}" for g in gpus))
-    # schedule: longest-first onto the fastest free slot (each point = one job = one chain)
-    free = [(0.0, g, k) for g in gpus for k in range(slots.get(g, 0))]
-    used = {g: 0.0 for g in gpus}
-    for j in sorted(jobs, key=lambda j: -j["h"][gpus[0]]):
-        best = min(free, key=lambda s: s[0] + j["h"][s[1]])
-        free.remove(best)
-        free.append((best[0] + j["h"][best[1]], best[1], best[2]))
-        used[best[1]] += j["h"][best[1]]
-    mk = max(f[0] for f in free)
-    out.append(f"SCHEDULE (slots {slots}, every slot free, longest first): wall-clock {mk / 24:.1f} days "
-               f"(+50 % extensions: {1.5 * mk / 24:.1f} days); GPU-h used " + ", ".join(f"{g} {used[g]:.0f}" for g in gpus))
-    h200_only = sorted((j["h"]["h200"] for j in jobs), reverse=True)
-    lanes = [0.0] * slots["h200"]
-    for h in h200_only:
-        lanes[lanes.index(min(lanes))] += h
-    out.append(f"H200 only (4 slots): {max(lanes) / 24:.1f} days")
-    dk = sum(disk_state[j["tier"]] + disk_out * j["t_init"] / 1000 for j in jobs)
-    out.append(f"DISK: final state + run-time outputs {dk:.0f} GB apparent (+50 % extensions {1.5 * dk:.0f} GB); "
-               f"one extra state per running job during the swap; summary .nc ~ state/4 each if made with snapshot")
+                   + " ".join(f"{j['h'].get(g, np.nan):7.1f}" for g in gpus) + f"  {dk:7.3f}")
+    out.append("TOTAL GPU-h if all on one type: " + ", ".join(f"{g} {tot[g]:.0f}" for g in gpus)
+               + f"; lower bound with all {sum(GPU_N.values())} GPUs busy: "
+               f"{tot['h200'] / sum(GPU_N[g] * tot['h200'] / tot[g] for g in gpus) / 24:.2f} days")
+    out.append("")
+    out.append(f"LANES (queue policy): one GPU job = one worker (lane_worker.sh) that claims runs from shared to-do lists "
+               f"queue/todo/T2, T1 (longest first) and runs each chain to its end ON THE NODE, extensions included, "
+               f"without releasing the GPU; it exits only when no eligible run is left. h200/a100 take T2 then T1; "
+               f"rtx only T1 (fp64 6.6x slower). Workers submitted: h200 {GPU_N['h200']}+1, a100 {GPU_N['a100']}+1, "
+               f"rtx {GPU_N['rtx']}+1 = {sum(GPU_N.values()) + 3} jobs (queue.sh limits 8/4/4, total 16).")
+    for ext in (1.0, 1.5):
+        mk, lanes, end = simulate_lanes(jobs, ext)
+        out.append(f"-- lane simulation, run lengths x {ext:g}: wall-clock {mk / 24:.2f} days (all GPUs free at start)")
+        for (g, k), L in lanes.items():
+            h = sum(e - s for _, s, e in L)
+            out.append(f"   {g}#{k}: {len(L):2d} runs, {h:5.1f} h, ends {end[(g, k)] / 24:4.2f} d: "
+                       + " ".join(r.split('-')[0] + ('' if r.endswith('T2-k8') else '(T1)') for r, _, _ in L))
+    mk1, _, end1 = simulate_lanes(jobs, 1.0)
+    out.append(f"PENDING JOBS: 3 at all times (the '+1' worker of each type) until that type's lists are empty "
+               f"(x1: h200 {min(v for (g, _), v in end1.items() if g == 'h200') / 24:.2f} d, "
+               f"a100 {min(v for (g, _), v in end1.items() if g == 'a100') / 24:.2f} d, "
+               f"rtx {min(v for (g, _), v in end1.items() if g == 'rtx') / 24:.2f} d); a freed GPU (worker exit/crash, "
+               f"or a non-priority job ending on a GPU we do not hold yet) goes to it at once; it then claims what is "
+               f"left or exits within seconds. A crashed worker's claim is adopted by the next worker (sacct state).")
+    out.append("If non-priority jobs hold some GPUs at submission (6 h, not preemptible), those lanes start up to 6 h late.")
+    out.append("")
+    dk = {x: sum(DISK_STATE[j["tier"]] + DISK_OUT[j["tier"]] * x * j["t_init"] / 100 + DISK_FIXED for j in jobs)
+          for x in (1.0, 1.5)}
+    snap = sum(DISK_SNAP[j["tier"]] for j in jobs)
+    peak = sum(2 * DISK_STATE["T2"] for _ in range(sum(GPU_N.values())))
+    out.append(f"DISK (on disk, ZFS-compressed; apparent sizes ~2-3x larger for states): kept per run = one state.nc + "
+               f"outputs + summary .nc WITHOUT snapshot: {dk[1.0]:.1f} GB (x1.5 lengths {dk[1.5]:.1f} GB); "
+               f"+ {snap:.1f} GB if every summary carries the float32 snapshot; transient while running "
+               f"<= {peak:.1f} GB (previous state + new restart per running job). Per run: T1 "
+               f"{DISK_STATE['T1'] + DISK_OUT['T1'] * 5.5 + DISK_FIXED:.2f}, T2 "
+               f"{DISK_STATE['T2'] + DISK_OUT['T2'] * 5.2 + DISK_FIXED:.2f} GB at ~550/520 R/vA.")
     txt = "\n".join(out) + "\n"
     open(os.path.join(HERE, "campaign_plan.txt"), "w").write(txt)
     print(txt)
 
 
+def lanes(a):
+    """create a production (or test) root: ROOT/<run_id>/ chains (auto_extend), ROOT/queue/todo/<tier>/NN_<run_id>
+    (NN = rank by H200 cost, longest first), and fresh worker folders ROOT/workers/W<stamp>-<gpu>-<k>/ (run.sh =
+    lane_worker.sh, lane.cfg). Prints the queue.sh commands. Existing run folders / queue entries are kept."""
+    import time
+    root = os.path.abspath(a.run)
+    sp = read_speed(a.speed)
+    jobs = sorted(jobs_with_cost(sp), key=lambda j: -j["h"]["h200"])
+    if a.only:
+        keep = a.only.split(",")
+        jobs = [j for j in jobs if any(j["run_id"].startswith(k) for k in keep)]
+    q = os.path.join(root, "queue")
+    for d in ("todo/T1", "todo/T2", "claimed", "done", "failed"):
+        os.makedirs(os.path.join(q, d), exist_ok=True)
+    known = {e.split("_", 1)[1] for d in ("todo/T1", "todo/T2", "claimed", "done", "failed")
+             for e in os.listdir(os.path.join(q, d)) if "_" in e and not e.endswith(".owner")}
+    for rank, j in enumerate(jobs):
+        rd = os.path.join(root, j["run_id"])
+        if not os.path.exists(rd):
+            make(argparse.Namespace(run=rd, point=j["run_id"], kP=None, kb=None, tier=None, run_id=None, grid=a.grid,
+                                    nu_perp=a.nu_perp, nu_z=a.nu_z, seg=a.seg, cadence=a.cadence, t_end=a.t_end,
+                                    auto_extend=True))
+        if j["run_id"] not in known:
+            with open(os.path.join(q, "todo", j["tier"], f"{rank:02d}_{j['run_id']}"), "w") as fh:
+                fh.write(j["run_id"] + "\n")
+    stamp = time.strftime("%m%d%H%M")
+    cmds = []
+    for spec in a.workers.split(","):
+        g, n = spec.split(":")
+        for _ in range(int(n)):
+            w = os.path.join(root, "workers", f"W{stamp}-{len(cmds):02d}-{g}")
+            os.makedirs(w)
+            shutil.copy(LANE, os.path.join(w, "run.sh"))
+            with open(os.path.join(w, "lane.cfg"), "w") as fh:
+                fh.write(f'ROOT="{root}"\nCLASSES="{CLASSES[g]}"\nGPU="{g}"\n')
+            cmds.append(f"~/flucs_work/queue.sh submit --gpu {g} {w}")
+    print(f"{root}: {len(jobs)} runs queued ({sum(j['tier'] == 'T2' for j in jobs)} T2, "
+          f"{sum(j['tier'] == 'T1' for j in jobs)} T1); {len(cmds)} worker folders:")
+    print("\n".join(cmds))
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("what", choices=["points", "plan", "make", "extend", "assess"])
+    ap.add_argument("what", choices=["points", "plan", "make", "extend", "assess", "lanes"])
     ap.add_argument("run", nargs="?")
     ap.add_argument("--speed", default=os.path.join(HERE, "speed.txt"))
     ap.add_argument("--point", default=None)
@@ -374,9 +506,13 @@ def main():
     ap.add_argument("--seg", type=float, default=SEG)
     ap.add_argument("--cadence", default="production", choices=list(CADENCE))
     ap.add_argument("--t-end", default="auto")
+    ap.add_argument("--apply", action="store_true", help="assess: apply the verdict (extend in place / write FINAL)")
+    ap.add_argument("--auto-extend", action="store_true", help="make: chain applies the extension rule itself")
+    ap.add_argument("--only", default="", help="lanes: comma list of run_id prefixes")
+    ap.add_argument("--workers", default="h200:5,a100:3,rtx:3", help="lanes: worker folders per GPU type")
     a = ap.parse_args()
-    if a.what in ("make", "extend", "assess", "plan"):
-        {"make": make, "extend": extend, "assess": assess, "plan": plan}[a.what](a)
+    if a.what in ("make", "extend", "assess", "plan", "lanes"):
+        {"make": make, "extend": extend, "assess": assess, "plan": plan, "lanes": lanes}[a.what](a)
         return
     rows = points()
     ns = sum(r["regime"] == "supercritical" for r in rows)
