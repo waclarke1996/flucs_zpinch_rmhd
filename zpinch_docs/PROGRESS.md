@@ -584,3 +584,19 @@ STOP for Will's go-ahead: `$PY runs/stage4a/campaign.py lanes runs/prod4` + the 
 flucs/zpinch_tools/sync.sh copies (never moves) the docs to flucs/zpinch_docs/ and the scripts/verification texts from
 runs/ to flucs/zpinch_tools/<path under runs/> (47 files, text only; refuses .nc/.png/run logs/> 1 MB). Run it before
 every commit (RUNNING_FLUCS.md section 8). Production not started.
+
+## Stage 4b production - prod4 submitted (2026-11-16 14:42 UTC), flucs zpinch @ dea9d8d (+ this commit)
+sinfo: sondhigpu and heraclesgpu wall time "infinite"; queue.sh sets none. `campaign.py lanes runs/prod4`: 52 runs (41 T2,
+  11 T1), 11 workers W11161441-NN. Checked P10B04-T1, P00B11-T2, P10B11-T2 vs campaign_plan.txt: grid 256x128x256/512,
+  nu_perp 4e-11 (p4), nu_z 7.5e-14/5.9e-16 (p4), t_init 500/600/500 (5/6/5 segments, restart_from chained), white noise
+  1e-5 seed 257, production cadences 0d .1, 1d 1, maps 5 (sample .5), kpar 5, slices 10, kyt 1, kytavg 25 (1), shells 5.
+JOBS h200 13137495-13137499, a100 13137500-13137502, rtx 13137503-13137505. At 14:53 RUNNING 95, 96 (h200: P10B11,
+  P09B11), 00, 01 (a100: P08B11, P10B10), 03, 04 (rtx: P08B06, P09B02); all stepping (T2 t ~10, dt 2.5e-4 on P10B11; T1
+  t 40, dt 0.01). PENDING 97 (Resources: 4th H200 held by another user), 98, 99, 02, 05 (spares by design).
+  Expected wall time 2.75 d (x1.5: 4.1 d) + up to 6 h for lanes waiting on held GPUs.
+MONITOR FIRST the 12 extrapolated-cost points (N0^2 > 2.56; the brief said 13, the plan stars 12; the four at 2.56 are
+  measured): P05B11 P06B11 P07B10 P07B11 P08B10 P08B11 P09B09 P09B10 P09B11 P10B09 P10B10 P10B11. Check dt vs the
+  steps/RvA estimate, edge fraction / D_out, Q/Q_MHD.
+DOC (no code change): DIAGNOSTICS.md 5/15: curvy3d plot-script spectra = 2 x ours (k_perp, k_y, k_x = 0), ~1 x ours at
+  k_x > 0 (k_y = 0 part exactly 2 x; mask keeps k_x > 0 on k_y = 0, no double count); k_perp > 42 bins = corner modes
+  only, plot/fit k_perp <= 42; header line numbers (54dbc2d) marked approximate. Copy refreshed in flucs/tests/zpinch.

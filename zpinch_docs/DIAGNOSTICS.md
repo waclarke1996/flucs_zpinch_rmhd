@@ -1,7 +1,7 @@
 # FLUCS ZPinchFourier run-time diagnostics: reference (flucs `zpinch` @ 16dd8df+ (Stage 4b), 2026-11-16)
 
 Paths: `D/` = `flucs/src/flucs/systems/zpinch_fourier/`; `R/` = `runs/stage4a/`; `C/` = `reference/curvy3d/`;
-`.cu` = `D/zpinch_fourier.cu`. Every formula below was read off the code at 54dbc2d; line numbers refer to it.
+`.cu` = `D/zpinch_fourier.cu`. Every formula below was read off the code at 54dbc2d; line numbers refer to it and are approximate (code has moved since).
 
 ## 0. Conventions shared by all diagnostics
 
@@ -165,8 +165,10 @@ so per mode (and per bin) (zplus + zminus)/2 = E_uperp + E_bperp and (Zpplus + Z
 | kz2E (Σ k_z² e_k; k_z,rms(k⊥) = (kz2E/E)^{1/2}) | ✓ | – | – | – |
 
 Names `<n>_kperp`, `<n>_ky`, `<n>_kx`, `<n>_kz`. The \|k_x\| spectra sum +k_x and −k_x (box average): **curvy3d's plot
-scripts plot only the +k_x half of their (k_x, k_y) spectra, so their k_x > 0 points are about half of ours** (exactly
-half on k_y = 0, where ours is ±k_x symmetric). **Reader:** `t, S = load_diag(segs_1d, "zp_spectra"); S["kx"],
+scripts multiply by 2 and have no ½, so their spectra are 2 × ours in k⊥, k_y and at k_x = 0; at k_x > 0 they plot
+only the +k_x half, so their k_x > 0 points are about 1 × ours (the k_y = 0 part exactly 2 × ours).** curvy3d's mask
+keeps only k_x > 0 on k_y = 0, so its factor 2 does not double count that row. **k⊥ range:** bins above
+min(K_x dk_x, K_y dk_y) (= 42 on T1/T2) hold only corner modes (incomplete shells): plot and fit only k⊥ ≤ 42. **Reader:** `t, S = load_diag(segs_1d, "zp_spectra"); S["kx"],
 S["zplus_kx"]`; bins: `c, e = kperp_bins(file)` (`D/zpinch_readers.py`; older rint files return rint-equivalent edges).
 **Verification:** Stage 4a verify.txt (b) (rint bins): vs dissipation_map.py ≤ 6.7e-15. Stage 4b: see §5a.
 **curvy3d:** dissipation_map.py uses rint(k⊥) shells (differ at exact half-integer k⊥); curvy3d's own `*_spec_calc`
@@ -390,7 +392,7 @@ build_registry.py / make_flux_table.py: `runs/tools/flucs_summary_nc.py` (`heatf
 | streamer kzkx maps | run mean | window means, n_samples | 1 (n_samples-weighted mean) |
 | shell transfers | CSV = mean / L_y² | per record, box average | CSV = mean(FLUCS)/L_y² |
 | `X_spec_calc` (k_x, k_y) | time mean Σ_kz \|mask·X\|², half space (k_y = 0: k_x > 0 only), no ½, w, k⊥² | `zp_kxky` window means, box average | zplus_kxky = k⊥²·zplus_spec_calc (k_y > 0); ours(k_x,0)+ours(−k_x,0) = k⊥²·curvy(k_x,0) (§6a) |
-| k_x spectra in plot scripts | only the +k_x half plotted | `<n>_kx`: \|k_x\| bins, ±k_x summed | curvy3d's k_x > 0 points ≈ ½ of ours |
+| 1d spectra in plot scripts (k⊥, k_y, k_x) | Σ half space × 2, no ½; k_x: only +k_x plotted | `<n>_kx`: \|k_x\| bins, ±k_x summed | plot scripts: ×2, no ½ → 2 × ours in k⊥, k_y, k_x = 0; k_x > 0 (+k_x only) ≈ 1 × ours (k_y = 0 part exactly 2 ×); mask keeps k_x > 0 on k_y = 0, so no double count |
 | k⊥ unit shells (dissipation_map, kpar_spectrum) | rint(k⊥) / [lo, hi) | Paper 1 rule (§0) | differ only at exact half-integer / edge k⊥ |
 | time axis | implicit i·save_time_hf (record at first t ≥ t_grid − dt/2) | stored actual t (first t ≥ t_grid − ε) | offsets < 1 dt |
 
