@@ -1,0 +1,146 @@
+/mnt/users/clarkew/pyenv/python3.10/lib/python3.10/site-packages/cupy/_environment.py:487: UserWarning: 
+--------------------------------------------------------------------------------
+
+  CuPy may not function correctly because multiple CuPy packages are installed
+  in your environment:
+
+    cupy, cupy-cuda12x
+
+  Follow these steps to resolve this issue:
+
+    1. For all packages listed above, run the following command to remove all
+       existing CuPy installations:
+
+         $ pip uninstall <package_name>
+
+      If you previously installed CuPy via conda, also run the following:
+
+         $ conda uninstall cupy
+
+    2. Install the appropriate CuPy package.
+       Refer to the Installation Guide for detailed instructions.
+
+         https://docs.cupy.dev/en/stable/install.html
+
+--------------------------------------------------------------------------------
+
+  warnings.warn(f'''
+seed: modes (nz,nx,hy) = (341, 171, 43); Pars nx ny nz = 171 85 341; E = 259.152
+(a) E (energy diag)                                                2.19e-16  PASS
+(a) E_kx0_frac                                                     0.00e+00  PASS
+(a) E_ky0_frac                                                     3.28e-16  PASS
+(a) E_ky0kz0_frac                                                  3.38e-16  PASS
+(a) S_zon0                                                         0.00e+00  PASS
+(a) S_zon_all                                                      0.00e+00  PASS
+(a) W_rms                                                          1.75e-16  PASS
+(a) b_rms                                                          1.51e-16  PASS
+(a) u_rms                                                          3.60e-16  PASS
+(a) upar_rms                                                       2.89e-16  PASS
+(a) dbpar_rms                                                      0.00e+00  PASS
+(a) Q_es/Q_MHD                                                     1.15e-16  PASS
+(a) Q_em/Q_MHD                                                     1.89e-16  PASS
+(a) Q_es+em = energy Q/Q_MHD                                       2.68e-16  PASS
+(a) kzrms band 1-2                                                 8.45e-16  PASS
+(a) kzrms band 2-4                                                 1.58e-15  PASS
+(a) kzrms band 4-8                                                 3.05e-15  PASS
+(a) kzrms band 8-16                                                9.78e-15  PASS
+(a) kzrms band 16-32                                               7.08e-15  PASS
+(a) dmap snapshot E                                                2.19e-16  PASS
+(a) dmap snapshot b_rms                                            1.51e-16  PASS
+(a) dmap snapshot E_kx0/E                                          0.00e+00  PASS
+(a) dmap snapshot Q/Q_MHD (inj)                                    4.02e-16  PASS
+(a) cfl 0.000 cfl_max 0.000 dt_min 0.000383 (t=0: info)            0.00e+00  INFO
+(b) E_kperp vs dmap E_s                                            8.44e-16  PASS
+(b) D_perp_kperp vs dmap Dp_s                                      6.71e-15  PASS
+(b) D_par_kperp vs dmap Dz_s                                       3.88e-15  PASS
+(b) inj_kperp vs dmap I_s                                          2.38e-17  PASS
+(b) kz_rms(kperp) vs dmap kzrms_s                                  5.72e-15  PASS
+(b) E_uperp_kperp                                                  3.36e-16  PASS
+(b) E_bperp_kperp                                                  2.02e-16  PASS
+(b) E_dbpar_kperp                                                  4.49e-16  PASS
+(b) E_upar_kperp                                                   1.81e-16  PASS
+(b) Qhat_kperp                                                     4.30e-16  PASS
+(b) Qhat_ky                                                        2.13e-15  PASS
+(b) Qhat_es_ky                                                     7.57e-16  PASS
+(b) Qhat_em_ky                                                     1.58e-15  PASS
+(b) E_ky                                                           2.85e-15  PASS
+(b) E_kz (dmap per-mode arrays)                                    5.07e-15  PASS
+(b) inj_kz (dmap per-mode arrays)                                  6.61e-15  PASS
+(b) D_perp_kz (dmap per-mode arrays)                               5.97e-15  PASS
+(b) D_par_kz (dmap per-mode arrays)                                5.69e-15  PASS
+(c) E_map (float32)                                                1.76e-08  PASS
+(c) inj_map (float32)                                              1.76e-08  PASS
+(c) D_perp_map (float32)                                           4.99e-08  PASS
+(c) D_par_map (float32)                                            3.14e-08  PASS
+(c) E_map summed over kz = E_kperp                                 3.71e-09  PASS
+(c) n_samples in t=0 record = 1                                    0.00e+00  INFO
+(d) kpar acc den                                                   6.76e-16  PASS
+(d) kpar acc lab                                                   1.23e-15  PASS
+(d) kpar acc full                                                  0.00e+00  PASS
+(d) kpar acc wrong                                                 0.00e+00  PASS
+(d) kpar acc large                                                 0.00e+00  PASS
+(d) kpar acc E                                                     3.24e-16  PASS
+(d) kpar acc vort2                                                 4.71e-16  PASS
+(d) kpar b2                                                        4.09e-16  PASS
+(d) kpar shells                                                    0.00e+00  PASS
+(d) kpar norm_err runtime 4.4e-16 tool 1.3e-15                     0.00e+00  INFO
+(e) line_x (ky=kz=0)                                               0.00e+00  PASS
+(e) line_y (kx=kz=0)                                               0.00e+00  PASS
+(e) kx_line                                                        1.67e-16  PASS
+(e) reader Phi_x = <Phi>_yz(x)                                     1.28e-15  PASS
+(e) reader Phi_y = <Phi>_xz(y)                                     1.01e-14  PASS
+(e) reader uy_x = <d_x Phi>_yz                                     1.44e-15  PASS
+(e) reader dBx_y = <-d_y Psi>_xz                                   1.81e-14  PASS
+(e) reader shear_x = <d_x^2 Phi>_yz                                5.50e-15  PASS
+(e) reader shear_y = <d_y u_x>_xz                                  9.82e-15  PASS
+(f) Phi_z0 (float32)                                               4.40e-08  PASS
+(f) dBpar_z0 (float32)                                             4.81e-08  PASS
+(g) dBx_sq                                                         1.84e-16  PASS
+(g) dBx_transfer                                                   4.18e-16  PASS
+(g) dBx_diss                                                       1.37e-15  PASS
+(g) upar_sq                                                        1.53e-16  PASS
+(g) upar_transfer                                                  4.65e-16  PASS
+(g) upar_inj                                                       1.00e-21  PASS
+(g) upar_diss                                                      1.16e-15  PASS
+(g) upar_reynolds_transfer                                         1.91e-16  PASS
+(g) upar_maxwell_transfer                                          4.41e-16  PASS
+(g) dtdBx_sq/dtupar_sq finite: True (backward FD; no ref)          0.00e+00  INFO
+(g) dBx_profile                                                    1.58e-18  PASS
+(g) upar_profile                                                   0.00e+00  PASS
+(g) turb_uperp_sq_profile                                          1.39e-16  PASS
+(g) turb_dBpar_sq_profile                                          1.57e-16  PASS
+(g) turb_dBperp_sq_profile                                         4.18e-16  PASS
+(g) turb_upar_sq_profile                                           1.92e-16  PASS
+(g) turb_char_wavenumbers                                          6.40e-16  PASS
+(g) turb_alfvenic_comps                                            2.09e-16  PASS
+(g) dBx_streamer_transfer_kzkx (f32)                               3.54e-08  PASS
+(g) upar_streamer_transfer_reynolds_kzkx (f32)                     1.97e-08  PASS
+(g) upar_streamer_transfer_maxwell_kzkx (f32)                      3.86e-08  PASS
+(h) kperp zplus [9 shells]                                         3.01e-14  PASS
+(h) kperp zminus [9 shells]                                        5.27e-14  PASS
+(h) kperp zparplus [9 shells]                                      4.70e-14  PASS
+(h) kperp zparminus [9 shells]                                     1.92e-14  PASS
+(h) kperp Tuu [9 shells]                                           3.59e-14  PASS
+(h) kperp TBu [9 shells]                                           1.35e-14  PASS
+(h) kperp TBB [9 shells]                                           1.89e-14  PASS
+(h) kperp TuB [9 shells]                                           2.10e-14  PASS
+(h) kperp TBparBpar [9 shells]                                     1.18e-14  PASS
+(h) kperp TuparBpar [9 shells]                                     3.80e-14  PASS
+(h) kperp Tuparupar [9 shells]                                     1.22e-14  PASS
+(h) kperp TBparupar [9 shells]                                     3.96e-14  PASS
+(h) kperp: sum over j,l of Elsasser transfers = 7.443e-12 (vs max |T| 2.222e+01; should be ~0)   0.00e+00  INFO
+(h) kz zplus [10 shells]                                           6.72e-14  PASS
+(h) kz zminus [10 shells]                                          5.04e-14  PASS
+(h) kz zparplus [10 shells]                                        4.49e-14  PASS
+(h) kz zparminus [10 shells]                                       2.29e-14  PASS
+(h) kz Tuu [10 shells]                                             7.17e-14  PASS
+(h) kz TBu [10 shells]                                             2.62e-14  PASS
+(h) kz TBB [10 shells]                                             4.17e-14  PASS
+(h) kz TuB [10 shells]                                             2.58e-14  PASS
+(h) kz TBparBpar [10 shells]                                       1.73e-14  PASS
+(h) kz TuparBpar [10 shells]                                       2.96e-14  PASS
+(h) kz Tuparupar [10 shells]                                       2.20e-14  PASS
+(h) kz TBparupar [10 shells]                                       3.04e-14  PASS
+(h) kz: sum over j,l of Elsasser transfers = -1.421e-13 (vs max |T| 1.180e+01; should be ~0)   0.00e+00  INFO
+
+116 checks, 0 FAIL

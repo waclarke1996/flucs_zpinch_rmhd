@@ -1,0 +1,38 @@
+seed.nc
+run A3a-T2-seed: kappaP = 1.13137, kappaBeta = 1.13137; modes 171 x 85 x 341; nu_perp = 4e-11 (k_perp^8), nu_z = 5.9e-16 (k_z^8)
+k_perp,max = 42, k_z,max = 170
+
+      t         E   b_rms  E_kx0/E E_k<=1.5   Q/QMHD  (saved)         D  k_tilt
+      0     259.2    11.8    0.401    0.567   0.8281   0.8281     133.8    16.4
+(Q/QMHD from the snapshot fields must equal the saved series at the same t; b_rms = rms |grad_perp Psi|; k_tilt uses the fitted alpha below)
+
+f_par = D_par / D = 0.424   (perpendicular share 0.576);  injection / D = 1.133
+dissipation: 50% below k_perp = 25.2389, 90% below k_perp = 35.1141;  50% below |k_z| = 84, 90% below |k_z| = 135
+edge margins (outer third):  k_perp: energy 2.22e-03, dissipation 3.84e-01;   k_z: energy 1.45e-03, dissipation 2.66e-01
+injection: net 151.5 (positive part 161.7, negative -10.17); positive part at k_perp < 1.5: 0.699, 1.5-4: 0.184, >= 4: 0.117
+  for k_perp >= 4: share at |k_z| <= 1 (lab m <= 1) 0.080, at |k_z| > 1 0.920; injection-weighted median of |k_z|/(alpha b_rms k_perp) there: 0.418
+
+ k_perp       E(k)      Dperp       Dpar        inj   inj/D  Dpar/D  kz_rms  kz_inj  b_rms*k
+    1.0  1.346e+02  2.581e-08  1.952e-03  1.121e+02 57419.637   1.000    3.65    2.63     11.8
+    2.0  3.601e+01  1.270e-06  2.049e-02  1.853e+01 903.909   1.000    9.33    6.23     23.6
+    3.0  1.700e+01  1.118e-05  7.482e-02  7.772e+00 103.865   1.000   14.15   10.06     35.4
+    4.0  1.290e+01  7.793e-05  4.086e-01  4.045e+00   9.899   1.000   20.79   15.92     47.1
+    6.0  6.754e+00  1.020e-03  1.388e+00  1.683e+00   1.212   0.999   29.19   24.24     70.7
+    8.0  4.247e+00  5.922e-03  2.340e+00  7.362e-01   0.314   0.997   36.04   31.21     94.3
+   12.0  2.136e+00  7.571e-02  2.869e+00  3.024e-01   0.103   0.974   44.34   39.89    141.4
+   16.0  1.240e+00  4.304e-01  2.932e+00  1.487e-01   0.044   0.872   50.05   46.68    188.6
+   20.0  7.038e-01  1.452e+00  2.302e+00  7.530e-02   0.020   0.613   53.45   49.91    235.7
+   25.0  3.265e-01  4.012e+00  1.639e+00  2.167e-02   0.004   0.290   57.91   55.99    294.7
+   30.0  1.034e-01  5.429e+00  7.641e-01  5.575e-03   0.001   0.123   61.75   59.46    353.6
+   35.0  1.809e-02  3.260e+00  2.164e-01  7.040e-04   0.000   0.062   66.69   64.73    412.6
+   40.0  2.074e-03  1.084e+00  4.030e-02  9.875e-05   0.000   0.036   71.93   70.54    471.5
+(inj/D > 1: the shell is a net source and exports energy nonlinearly; < 1: it is fed by the cascade)
+
+At the dissipation-weighted median k_d = 25.2389: kz_rms = 57.9
+Field-line tilt: kz_rms ~ alpha * b_rms * k_perp with alpha = 0.40 (fitted at k_perp = 1-4).
+Fastest linear growth rate gamma = 0.717 (kappa = 1). Cut-offs of the driven range (perpendicular wavenumbers where the damping = gamma):
+  nu_perp:            k_perp,cut  = 19.1
+  nu_z via the tilt:  k_perp,tilt = k_z*/(alpha b) = 76.8/(alpha b) = 16.4 with the rms b_rms 11.8,  16.4 with the median snapshot b 11.8
+  -> nu_z (tilt) cuts the driven range first
+  k_z,max needed for k_perp,tilt >= k_perp,cut with the same edge damping as in k_perp: ~ 197 (now 170)
+Wrote ref/dmap.png and ref/dmap.txt

@@ -1,0 +1,100 @@
+# campaign plan (campaign.py plan, speed file /mnt/users/clarkew/flucs_work/runs/stage4a/speed.txt); 52 points, initial lengths (in-chain extensions: + 500 R/vA per step of the rule; '+50 %' rows assume 1.5 x every run)
+# GPU-h per point = steps_per_rva(N0^2) x t_init x ms/step x (1 + diag overhead 2.9 % T1 / 1.6 % T2); '*' = N0^2 > 2.56 (extrapolated cost); disk_GB = on-disk per run at t_init (state + outputs + summary without snapshot)
+run_id            tier  N0^2  gamma_d t_init  steps/RvA  h200_h  a100_h   rtx_h  disk_GB
+P00B11-T2-k8      T2   1.28  0.246    600      1201      3.8     8.3    25.6    0.259
+P01B10-T2-k8      T2   1.08  0.125    600      1100      3.5     7.6    23.4    0.259
+P01B11-T2-k8      T2   1.52  0.347    500      1508      4.0     8.7    26.8    0.243
+P02B10-T2-k8      T2   1.28  0.247    600      1201      3.8     8.3    25.6    0.259
+P02B11-T2-k8      T2   1.81  0.449    500      1874      5.0    10.8    33.3    0.243
+P03B09-T2-k8      T2   1.08  0.125    600      1100      3.5     7.6    23.4    0.259
+P03B10-T2-k8      T2   1.52  0.351    500      1508      4.0     8.7    26.8    0.243
+P03B11-T2-k8      T2   2.15  0.563    500      2309      6.2    13.3    41.0    0.243
+P04B09-T2-k8      T2   1.28  0.249    600      1201      3.8     8.3    25.6    0.259
+P04B10-T2-k8      T2   1.81  0.458    500      1874      5.0    10.8    33.3    0.243
+P04B11-T2-k8      T2   2.56  0.693    500      2826      7.5    16.3    50.2    0.243
+P05B08-T2-k8      T2   1.08  0.126    600      1100      3.5     7.6    23.4    0.259
+P05B09-T2-k8      T2   1.52  0.356    500      1508      4.0     8.7    26.8    0.243
+P05B10-T2-k8      T2   2.15  0.578    500      2309      6.2    13.3    41.0    0.243
+P05B11-T2-k8      T2   3.04  0.848    500      3441*     9.2    19.8    61.1    0.243
+P06B08-T2-k8      T2   1.28  0.252    600      1201      3.8     8.3    25.6    0.259
+P06B09-T2-k8      T2   1.81  0.470    500      1874      5.0    10.8    33.3    0.243
+P06B10-T2-k8      T2   2.56  0.717    500      2826      7.5    16.3    50.2    0.243
+P06B11-T2-k8      T2   3.62  1.077    500      4173*    11.1    24.0    74.1    0.243
+P07B07-T2-k8      T2   1.08  0.126    600      1100      3.5     7.6    23.4    0.259
+P07B08-T2-k8      T2   1.52  0.365    500      1508      4.0     8.7    26.8    0.243
+P07B09-T2-k8      T2   2.15  0.612    500      2309      6.2    13.3    41.0    0.243
+P07B10-T2-k8      T2   3.04  0.960    500      3441*     9.2    19.8    61.1    0.243
+P07B11-T2-k8      T2   4.31  1.358    500      5043*    13.4    29.0    89.5    0.243
+P08B06-T1-k8      T1   0.91  0.152    600      1100      1.8     4.1    11.7    0.160
+P08B07-T2-k8      T2   1.28  0.370    500      1201      3.2     6.9    21.3    0.243
+P08B08-T2-k8      T2   1.81  0.604    500      1874      5.0    10.8    33.3    0.243
+P08B09-T2-k8      T2   2.56  0.884    500      2826      7.5    16.3    50.2    0.243
+P08B10-T2-k8      T2   3.62  1.224    500      4173*    11.1    24.0    74.1    0.243
+P08B11-T2-k8      T2   5.12  1.631    500      6077*    16.2    35.0   107.9    0.243
+P09B02-T1-k8      T1   0.27  0.070    700      1100      2.1     4.8    13.6    0.173
+P09B03-T1-k8      T1   0.38  0.130    600      1100      1.8     4.1    11.7    0.160
+P09B04-T1-k8      T1   0.54  0.206    600      1100      1.8     4.1    11.7    0.160
+P09B05-T1-k8      T1   0.76  0.307    500      1100      1.5     3.4     9.7    0.148
+P09B06-T2-k8      T2   1.08  0.441    500      1100      2.9     6.3    19.5    0.243
+P09B07-T2-k8      T2   1.52  0.616    500      1508      4.0     8.7    26.8    0.243
+P09B08-T2-k8      T2   2.15  0.841    500      2309      6.2    13.3    41.0    0.243
+P09B09-T2-k8      T2   3.04  1.125    500      3441*     9.2    19.8    61.1    0.243
+P09B10-T2-k8      T2   4.31  1.477    500      5043*    13.4    29.0    89.5    0.243
+P09B11-T2-k8      T2   6.09  1.905    500      7308*    19.5    42.1   129.7    0.243
+P10B00-T1-k8      T1   0.16  0.153    600      1100      1.8     4.1    11.7    0.160
+P10B01-T1-k8      T1   0.23  0.189    600      1100      1.8     4.1    11.7    0.160
+P10B02-T1-k8      T1   0.32  0.236    600      1100      1.8     4.1    11.7    0.160
+P10B03-T1-k8      T1   0.45  0.298    600      1100      1.8     4.1    11.7    0.160
+P10B04-T1-k8      T1   0.64  0.380    500      1100      1.5     3.4     9.7    0.148
+P10B05-T1-k8      T1   0.91  0.488    500      1100      1.5     3.4     9.7    0.148
+P10B06-T2-k8      T2   1.28  0.631    500      1201      3.2     6.9    21.3    0.243
+P10B07-T2-k8      T2   1.81  0.817    500      1874      5.0    10.8    33.3    0.243
+P10B08-T2-k8      T2   2.56  1.056    500      2826      7.5    16.3    50.2    0.243
+P10B09-T2-k8      T2   3.62  1.357    500      4173*    11.1    24.0    74.1    0.243
+P10B10-T2-k8      T2   5.12  1.731    500      6077*    16.2    35.0   107.9    0.243
+P10B11-T2-k8      T2   7.24  2.186    500      8771*    23.4    50.5   155.7    0.243
+TOTAL GPU-h if all on one type: h200 321, a100 696, rtx 2133; lower bound with all 8 GPUs busy: 2.56 days
+
+LANES (queue policy): one GPU job = one worker (lane_worker.sh) that claims runs from shared to-do lists queue/todo/T2, T1 (longest first) and runs each chain to its end ON THE NODE, extensions included, without releasing the GPU; it exits only when no eligible run is left. h200/a100 take T2 then T1; rtx only T1 (fp64 6.6x slower). Workers submitted: h200 4+1, a100 2+1, rtx 2+1 = 11 jobs (queue.sh limits 8/4/4, total 16).
+-- lane simulation, run lengths x 1: wall-clock 2.75 days (all GPUs free at start)
+   h200#0:  9 runs,  61.6 h, ends 2.57 d: P08B11 P10B09 P06B10 P05B10 P02B11 P08B08 P00B11 P03B09 P10B06
+   h200#1:  9 runs,  61.4 h, ends 2.56 d: P10B10 P05B11 P04B11 P08B09 P09B08 P03B10 P09B07 P01B10 P08B07
+   h200#2:  9 runs,  61.7 h, ends 2.57 d: P07B11 P06B11 P07B10 P10B08 P04B10 P01B11 P05B09 P06B08 P07B07
+   h200#3:  9 runs,  61.4 h, ends 2.56 d: P09B10 P08B10 P09B09 P03B11 P07B09 P10B07 P02B10 P05B08 P09B06
+   a100#0:  2 runs,  59.2 h, ends 2.47 d: P10B11 P07B08
+   a100#1:  3 runs,  61.2 h, ends 2.55 d: P09B11 P06B09 P04B09
+   rtx#0:  5 runs,  58.3 h, ends 2.43 d: P09B02(T1) P09B04(T1) P10B01(T1) P10B03(T1) P10B04(T1)
+   rtx#1:  6 runs,  66.1 h, ends 2.75 d: P08B06(T1) P09B03(T1) P10B00(T1) P10B02(T1) P09B05(T1) P10B05(T1)
+-- lane simulation, run lengths x 1.5: wall-clock 4.13 days (all GPUs free at start)
+   h200#0:  9 runs,  92.4 h, ends 3.85 d: P08B11 P10B09 P06B10 P05B10 P02B11 P08B08 P00B11 P03B09 P10B06
+   h200#1:  9 runs,  92.1 h, ends 3.84 d: P10B10 P05B11 P04B11 P08B09 P09B08 P03B10 P09B07 P01B10 P08B07
+   h200#2:  9 runs,  92.5 h, ends 3.86 d: P07B11 P06B11 P07B10 P10B08 P04B10 P01B11 P05B09 P06B08 P07B07
+   h200#3:  9 runs,  92.0 h, ends 3.84 d: P09B10 P08B10 P09B09 P03B11 P07B09 P10B07 P02B10 P05B08 P09B06
+   a100#0:  2 runs,  88.8 h, ends 3.70 d: P10B11 P07B08
+   a100#1:  3 runs,  91.7 h, ends 3.82 d: P09B11 P06B09 P04B09
+   rtx#0:  5 runs,  87.4 h, ends 3.64 d: P09B02(T1) P09B04(T1) P10B01(T1) P10B03(T1) P10B04(T1)
+   rtx#1:  6 runs,  99.1 h, ends 4.13 d: P08B06(T1) P09B03(T1) P10B00(T1) P10B02(T1) P09B05(T1) P10B05(T1)
+PENDING JOBS: 3 at all times (the '+1' worker of each type) until that type's lists are empty (x1: h200 2.56 d, a100 2.47 d, rtx 2.43 d); a freed GPU (worker exit/crash, or a non-priority job ending on a GPU we do not hold yet) goes to it at once; it then claims what is left or exits within seconds. A crashed worker's claim is adopted by the next worker (sacct state).
+If non-priority jobs hold some GPUs at submission (6 h, not preemptible), those lanes start up to 6 h late.
+
+QUOTA: 52 GB free (Will, 2026-11-16: 98 of 150 GB used).
+DISK (on disk, ZFS-compressed; apparent sizes ~2-3x larger for states): kept per run = one state.nc + outputs + summary .nc WITHOUT snapshot: 11.8 GB (x1.5 lengths 14.0 GB); + 3.7 GB if every summary carries the float32 snapshot; transient while running <= 2.5 GB (previous state + new restart per running job). Per run: T1 0.15, T2 0.25 GB at ~550/520 R/vA.
+
+DISK PER RUN (MB on disk; run lengths T1 550, T2 520 R/vA = mean t_init; apparent sizes in brackets)
+  item                         T1 /100RvA T2 /100RvA   T1 run   T2 run
+  0d (0.1)                           0.62       0.62      3.4      3.2
+  1d spectra+profiles (1)            3.82       4.33     21.0     22.5
+  maps zp_maps (5, 0.5-win.)         1.39       2.78      7.6     14.5
+  maps zp_kxky (5, 0.5-win.)         3.53       3.53     19.4     18.4
+  kpar (5)                           0.04       0.04      0.2      0.2
+  kyt (1)                            0.88       0.88      4.8      4.6
+  kytavg streamer (25)               1.35       2.70      7.4     14.0
+  shells (5)                         0.26       0.29      1.4      1.5
+  slices (10)                        0.98       0.98      5.4      5.1
+  run-time outputs, total           12.87      16.15     70.8     84.0
+  state.nc (one, float64)                            80 (273) 159 (545)
+  summary .nc, no snapshot                                2.1      2.1
+  summary snapshot (float32)                             38.2     79.0
+  logs, inputs, timing                                    0.5      0.5
+  TOTAL kept, no snapshot: T1 153 MB, T2 246 MB (with snapshot 191 / 325); T2 doubled by one extension (+500): 326 MB; T2 at the cap (~1600 R/vA): 420 MB
+  CUTS: (1, adopted) summary without snapshot: -38/-79 MB, regenerable any time from state.nc (flucs_summary_nc.py RUN, ~1 min). (2) zlib on state.nc: 0 on disk (ZFS already compresses the padded zeros: 273 -> 80 MB); only smaller apparent size / copies (tools/compress_state.py, lossless, tested). (3) optional, only if the quota is tighter than 0.3 GB/run at the cap: slices every 20 (-0.5 MB/100) and kytavg windows 50 (-1.4/-2.7 MB/100). Not proposed: coarser maps (state-conditioned dissipation maps need windows << two-state residence times) or fewer 0d/1d records (analysis inputs). Only ONE state.nc per run (chain policy) and no other 3D data.

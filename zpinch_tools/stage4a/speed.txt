@@ -1,0 +1,8 @@
+# tier gpu ms_per_step   (Stage 4a STEP 4, measured 15-16 Nov 2026: ~2000 steps from turbulent states, production
+#                          diagnostics a-f; H200 identical with 1 or 4 cores; FLUCS double precision)
+T1 h200 9.5
+T2 h200 18.9
+T1 a100 21.9
+T2 a100 40.8
+T1 rtx 61.8
+T2 rtx 125.8

@@ -1,0 +1,78 @@
+# Stage 4a verification: T2 A3a state (stage3e A3a-T2-k8 t=1200) with ALL run-time diagnostics on.
+# reset_time: the run starts at t = 0, so every time-based output records the loaded state at t = 0
+# (compared with the offline tools on the same restart.nc). Then 0.3 R/vA to exercise the cadences.
+[setup]
+system = "ZPinchFourier"
+solver = "FourierSolver"
+precision = "double"
+linear = false
+
+[dimensions]
+nx = 256
+ny = 128
+nz = 512
+
+[parameters]
+kb = 1.13137085
+kP = 1.13137085
+
+[timestepping]
+method = "ssprk3e"
+
+[time]
+dt_max = 0.01
+tfinal = 0.3
+max_cfl = 0.5
+
+[hyperdissipation]
+kperp = 4e-11
+kperp_power = 4
+kz = 5.9e-16
+kz_power = 4
+
+[init]
+method = "white_noise"  # ignored: restart
+amplitude = 1e-05
+rand_seed = 257
+
+[output]
+write_steps = 200
+
+[output.0d]
+save_time = 0.1
+diags = [{name = "energy", options = {invariants = true}}, {name = "zp_scalars"}]
+
+[output.1d]
+save_time = 0.1
+diags = ["zp_spectra", "zp_profiles"]
+
+[output.maps]
+save_time = 0.1
+sample_time = 0.05
+diags = ["zp_maps"]
+
+[output.kpar]
+save_time = 0.1
+diags = ["zp_kpar"]
+
+[output.slices]
+save_time = 0.1
+diags = ["zp_slices"]
+
+[output.kyt]
+save_time = 0.1
+diags = ["zp_kytransfer"]
+
+[output.kytavg]
+save_time = 0.1
+sample_time = 0.05
+diags = ["zp_streamer_kzkx"]
+
+[output.shells]
+save_time = 0.1
+diags = ["zp_shells"]
+
+[restart]
+restart_from = "../../../stage3e/A3a-T2-k8/t1200/restart.nc"
+reset_time = true
+write_restart_file = false

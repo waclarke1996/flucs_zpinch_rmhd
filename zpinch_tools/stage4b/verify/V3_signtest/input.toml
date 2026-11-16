@@ -1,0 +1,50 @@
+# A2-T1 (campaign.py chain segment; restart chain run by run.sh = chain_run.sh)
+[setup]
+system = "ZPinchFourier"
+solver = "FourierSolver"
+precision = "double"
+linear = false
+
+[dimensions]
+nx = 256
+ny = 128
+nz = 256
+
+[parameters]
+kb = 0.28284271
+kP = 0.0
+
+[timestepping]
+method = "ssprk3e"
+
+[time]
+dt_max = 0.0001
+tfinal = 0.00080001
+max_cfl = 0.5
+
+[hyperdissipation]
+kperp = 0.0
+kperp_power = 4
+kz = 0.0
+kz_power = 4
+
+[init]
+method = "white_noise"
+amplitude = 1e-05
+rand_seed = 257
+
+[output]
+write_steps = 500
+
+[output.0d]
+save_steps = 1
+diags = [{name = "energy", options = {invariants = true}}]
+
+[output.shells]
+save_steps = 1
+diags = [{name = "zp_shells"}]
+
+[restart]
+restart_from = "../../../stage4a/realtest/A2-T1-k8/t0500/state.nc"
+reset_time = true
+write_restart_file = false

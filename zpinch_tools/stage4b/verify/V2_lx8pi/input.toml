@@ -1,0 +1,59 @@
+# A2-T1 (campaign.py chain segment; restart chain run by run.sh = chain_run.sh)
+[setup]
+system = "ZPinchFourier"
+solver = "FourierSolver"
+precision = "double"
+linear = false
+
+[dimensions]
+nx = 48
+ny = 24
+nz = 48
+Lx = 25.132741228718345  # 8 pi
+
+[parameters]
+kb = 0.28284271
+kP = 2.2627417
+
+[timestepping]
+method = "ssprk3e"
+
+[time]
+dt_max = 0.01
+tfinal = 1.0
+max_cfl = 0.5
+
+[hyperdissipation]
+kperp = 2e-06
+kperp_power = 4
+kz = 1e-08
+kz_power = 4
+
+[init]
+method = "white_noise"
+amplitude = 0.001
+rand_seed = 257
+
+[output]
+write_steps = 500
+
+[output.0d]
+save_time = 0.1
+diags = [{name = "energy", options = {invariants = true, stop_dt_min = 1e-05, stop_persist_time = 5.0}}, {name = "zp_scalars"}]
+
+[output.1d]
+save_time = 0.5
+diags = [{name = "zp_spectra"}]
+
+[output.maps]
+save_time = 0.5
+sample_time = 0.25
+diags = [{name = "zp_maps"}, {name = "zp_kxky"}]
+
+[output.kpar]
+save_time = 0.5
+diags = [{name = "zp_kpar"}]
+
+[restart]
+write_restart_file = true
+write_steps = 1000000000  # no periodic restarts: only the final (validated) one
