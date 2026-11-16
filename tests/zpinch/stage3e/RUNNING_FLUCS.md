@@ -137,4 +137,4 @@ $PY $C plan                                               # campaign_plan.txt (G
   (FLUCS writes restart.nc; tools/check_state.py checks grid, finite values and time before it is renamed; the previous
   state is deleted only afterwards). A killed job loses at most the running segment. `EARLY_STOP` ends a chain.
 - Analysis from run-time outputs only: `$PY runs/stage4a/f_analyse.py RUN` (statistics from t_sat + 50 by default);
-  curvy3d-format summary for build_registry.py / make_flux_table.py: `$PY runs/tools/flucs_summary_nc.py RUN`.
+  curvy3d-format summary for build_registry.py / make_flux_table.py: `$PY runs/tools/flucs_summary_nc.py RUN`. Then `build_registry.py RUN/<id>_summary.nc ...` (the summary FILES: given the run folder it also lists every raw FLUCS .nc as ERROR).

@@ -453,7 +453,7 @@ TO DO: STEP 1: overhead from 13132247 (target < 5 % a-f). STEP 2: test chain_run
   STEP 5: extension rule, T3 rule, campaign plan (GPU-h per type from STEP 4, wall days, disk) -> campaign_plan.txt.
   Finish: <= 40-line PROGRESS entry, commit, stop for Will's approval (no production submission). Also pending:
   Will's review checklist for the work above.
-## Stage 4a part 2 - review, storage chain, speed, campaign plan (2026-11-16), flucs zpinch @ (see commit)
+## Stage 4a part 2 - review, storage chain, speed, campaign plan (2026-11-16), flucs zpinch @ 7383e0e
 STORAGE: deleted 142/145 paths of runs/DELETE_LIST_stage4a.txt (no job running; explicit paths). Kept stage3e/A3a-T2-k8
   t1050, t1100 and, for now, stage3e/A2-T1-k8/t0500/restart.nc (speed-test seed + REALTEST reference). runs/: 20 -> 5.6 GB
   disk (53 -> 8.6 GB apparent). QUEUE_LOG.tsv: FOUR bogus 49152 lines removed (2 a100, 2 rtx), not two.
@@ -492,3 +492,34 @@ TO DO ("continue: analyse Stage 4a realtest"): chaintest2 run.log (expect 0 FAIL
   (also --at-times 100,...,500); summary + make_flux_table vs f_analyse <Q>; check_transfers + inspect_chain on it;
   0d series / t0500 state vs stage3e/A2-T1-k8 (determinism, 50- vs 100-R/vA segments); then delete
   stage3e/A2-T1-k8/t0500/restart.nc and realtest states. Production only after Will's approval.
+
+## Stage 4a part 3 - realtest + chaintest2 analysis, duplicate-record fix (2026-11-16), flucs zpinch @ a21eb61
+chaintest2 (13134354): all 8 phases behaved as intended; 3 inspector FAILs were the inspector again (state time vs the
+  nominal grid; FLUCS final_time = init_time + tfinal, so segment ends drift +<= 1 dt per segment: 5.01, 10.02 ...
+  30.03; harmless, records are on the absolute grid). Inspector fixed (start-state time + tfinal): 0 FAIL.
+REALTEST 13134353 (A2-T1-k8 chain 0-300 + extension to 500, 5 x 100 R/vA, 1.62 h, 9.9 ms/step): all segments validated.
+ BUG (FLUCS, ZPTimedOutputNC): a step within eps = 1e-9 t BELOW a grid point recorded it and the next step recorded
+   it AGAIN (next point computed from t, not t + eps): 3 duplicate 0d records, 1 in 1d/kyt, one maps/kytavg window
+   with 11/26 samples instead of 10/25. Rate ~ eps/dt per record (~1 per 1600 at t = 500): every Stage 3e/4a run with
+   time-based outputs may hold a few; effect on averages negligible, but the summary writer's kyt grid placement
+   raised on them. FIXED a21eb61 (_grid_point_after, also at restart); unit test review/test_timed_trigger.py
+   (old code reproduces the duplicate, new: 16 PASS). Readers: load_diag / series_0d drop duplicates of TIME-based
+   outputs only (period from the segment's input.toml; step-based Stage 3e outputs untouched - a median-gap rule
+   would have dropped real records there). Regression run chaintest3 = 13134452 (see below).
+ f_analyse vs e_analyse (t0 = 100, same run): <Q/Q_MHD> 0.088 +- 0.007 (tau_int 4.7), <E> 30, E_kx0/E, b_rms, piles
+   identical. E_out,z: f = ratio of means (1.60e-3), e = mean of ratios (1.38e-3; ratio of means 1.61e-3). E_out,perp
+   was 0.8 x e: unit bin k_perp = 28 straddles the cut 2/3 x 42 and was dropped -> FIXED (bin weight = fraction above
+   the cut): 1.83e-3 vs 1.84e-3 (t = 500 state: 1.50e-3 vs 1.52e-3). maps vs Stage 3e state dmaps: f_par 0.27/0.25,
+   D_out 0.36/0.20 vs 0.35/0.18, k_d 26/25.6, kz_rms(k_d) 29.0/28.3, k_tilt 21.4/21.6; k(kz*) 51 (corner bins) vs inf.
+ summary .nc (after de-dup: 5001 0d, 501 kyt on the grid) -> build_registry + make_flux_table: Q/Q_MHD 0.0882,
+   tau_int 4.70 = f_analyse. Pass build_registry the summary file(s), not the run folder (raw FLUCS .nc = ERROR rows).
+ check_transfers on t0500 (production grid): 0 FAIL (K1 line budgets 1.6e-2/8.3e-3 [2e-2] at dt 7.5e-4; rest <= 6e-14).
+ Determinism: realtest (5 x 100) vs stage3e A2-T1 (10 x 50 R/vA): 0d E agrees to 1e-5 (= interpolation of the
+   step-based Stage 3e records) for t > 50; <Q> 0.0882 and <E> 30.25 both; end states at 500.0019 vs 500.0062 differ
+   by 4e-3 of max (= time offset). Restarts are lossless; segment length does not change the trajectory.
+Storage: deleted stage3e/A2-T1-k8/t0500/restart.nc and realtest t0100-t0400 state.nc (KEEP_STATES test copies);
+  runs/ 6.1 -> 5.7 GB. Kept realtest t0500/state.nc (latest validated state). The speed-test inputs pointed at the
+  deleted A2 state: to re-run them use runs/stage4a/realtest/A2-T1-k8/t0500/state.nc.
+JOBS: 13134452 chaintest3 (runs/stage4a/chaintest3: chaintest2 rerun on a21eb61, ~1.5 min; PENDING at 05:51).
+TO DO ("continue: check chaintest3"): grep "FAIL count" runs/stage4a/chaintest3/run.log (expect 0 in all 8 phases, and
+  no duplicate records). Then the campaign is ready; production only after Will's approval.
