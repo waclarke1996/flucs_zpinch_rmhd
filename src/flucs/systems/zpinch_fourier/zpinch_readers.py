@@ -19,13 +19,51 @@ import numpy as np
 FIELD_NAMES = ("Phi", "Psi", "dBpar", "upar")
 
 
-def load_diag(paths, diag, names=None):
+def timed_period(path):
+    """save_time of a time-based output file RUN/output.<name>.nc from RUN/input.toml ([output.<name>] save_time > 0),
+    else None (step-based output, or no input.toml next to it)."""
+    import os
+    import re
+
+    m = re.fullmatch(r"output\.(.+)\.nc", os.path.basename(path))
+    inp = os.path.join(os.path.dirname(path), "input.toml")
+    if not m or not os.path.exists(inp):
+        return None
+    sec = re.search(rf"^\[output\.{re.escape(m.group(1))}\]\s*$(.*?)(?=^\[|\Z)", open(inp).read(), re.M | re.S)
+    v = re.search(r"^\s*save_time\s*=\s*([0-9.eE+-]+)", sec.group(1), re.M) if sec else None
+    return float(v.group(1)) if v and float(v.group(1)) > 0 else None
+
+
+def duplicate_mask(t, period):
+    """
+    True for the records to keep. Time-based outputs (record grid t = k x period) written before the 2026-11-16
+    trigger fix can hold a duplicate record (a step within 1e-9 t BELOW a grid point recorded it, the next step
+    recorded it again): a record with the same grid index rint(t / period) as the previous kept one is dropped (the
+    first, on-time, one is kept). period None (step-based output): nothing is dropped.
+    """
+    t = np.asarray(t, float)
+    keep = np.ones(len(t), bool)
+    if period is None or len(t) < 2:
+        return keep
+    k = np.rint(t / period)
+    last = k[0]
+    for i in range(1, len(t)):
+        if k[i] == last:
+            keep[i] = False
+        else:
+            last = k[i]
+    return keep
+
+
+def load_diag(paths, diag, names=None, dedup=True):
     """
     Concatenate the time-dependent variables of one diagnostic over files.
     Returns (time, {name: array (nt, ...)}). Complex variables (stored as
     <name>_real / <name>_imag) are returned complex under <name>.
     Time-independent variables and the dimension variables are returned
     from the first file under their own names (no time axis).
+    dedup: drop duplicate records of time-based outputs (see duplicate_mask; period from timed_period of the first
+    file; step-based outputs are never changed).
     """
     from netCDF4 import Dataset
 
@@ -58,13 +96,15 @@ def load_diag(paths, diag, names=None):
                     a = np.asarray(var[:])
                     data.setdefault((base, part), []).append(a)
     t = np.concatenate(ts) if ts else np.zeros(0)
+    keep = duplicate_mask(t, timed_period(paths[0]) if paths else None) if dedup else np.ones(len(t), bool)
+    t = t[keep]
     out = {}
     for (base, part), arrs in data.items():
-        a = np.concatenate(arrs)
+        a = np.concatenate(arrs)[keep]
         if part is None:
             out[base] = a
         elif part == "re":
-            out[base] = a + 1j * np.concatenate(data[(base, "im")])
+            out[base] = a + 1j * np.concatenate(data[(base, "im")])[keep]
     out.update({k: v for k, v in static.items() if k not in out})
     return t, out
 

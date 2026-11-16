@@ -52,6 +52,13 @@ def growth_rate_max(kb, kP):     # as dissipation_map.py / kpar_spectrum.py
     return gam
 
 
+def above(kc, cut, dk):
+    """weight of each unit bin (centre kc, width dk) beyond the cut: 1 above, 0 below, and for the bin straddling the
+    cut the fraction of its width above it (uniform modes in the bin): matches the per-mode count of e_analyse /
+    dissipation_map to ~1 % (a bin centred on the cut, e.g. k_perp = 28 for k_perp,max 42, holds ~1/4 of E_out)."""
+    return np.clip((np.asarray(kc, float) + dk / 2 - cut) / dk, 0.0, 1.0)
+
+
 def t_saturation(t, q, frac=0.5):
     """first time Q reaches frac x median(Q over the second half of the series); nan if never."""
     t, q = np.asarray(t, float), np.asarray(q, float)
@@ -220,7 +227,7 @@ def main():
         zb = np.rint(kz_c / dkz).astype(int)
         cz = np.where(kz_c > 0, 2.0, 1.0) * cnt_xy           # modes per |k_z| value: +-k_z
         Ez2 = np.bincount(zb, Ez) / np.maximum(np.bincount(zb, cz), 1)
-        spec_rows[st] = dict(n=int(m.sum()), Eop=Ep[kp_c > 2 / 3 * kpm].sum() / Et, Eoz=Ez[kz_c > 2 / 3 * kzm].sum() / Et,
+        spec_rows[st] = dict(n=int(m.sum()), Eop=(Ep * above(kp_c, 2 / 3 * kpm, dkp)).sum() / Et, Eoz=Ez[kz_c > 2 / 3 * kzm].sum() / Et,
                              pp=pile(Ep2, kpm, dkp), pz=pile(Ez2, kzm, dkz), E=Et)
     say(f"\n1D spectra per state (1-R/vA records; k_perp,max {kpm:.1f}, k_z,max {kzm:.0f}; outer third beyond 2/3; pile = "
         "max e(k)/min e(k'<k), e = energy per mode, shells 2 / 4; > 1 = rising)")
@@ -261,7 +268,7 @@ def main():
             ktilt = kz_star / (alpha * b_rms) if alpha > 0 else np.inf
             cross = next((float(kpc[i]) for i in range(len(kpc)) if Es[i] > 0 and kzr[i] >= kz_star), np.inf)
             Dz_k = (avg["D_perp"] + avg["D_par"]).sum(0)
-            dm[st] = dict(n=int(m.sum()), b=b_rms, fpar=Dz.sum() / Dt, Dop=D[kpc > 2 / 3 * kpm].sum() / Dt,
+            dm[st] = dict(n=int(m.sum()), b=b_rms, fpar=Dz.sum() / Dt, Dop=(D * above(kpc, 2 / 3 * kpm, dkp)).sum() / Dt,
                           Doz=Dz_k[kzc > 2 / 3 * kzm].sum() / Dt, kd=kpc[i_d], kzd=kzr[i_d], alpha=alpha,
                           ktilt=ktilt, cross=cross, inj_frac_low=avg["inj"][kpc < 1.5].sum() / avg["inj"].sum())
         say(f"\nmaps per state ({W:g}-R/vA windows, state if >= {a.win_frac:g} of the window classified so): "

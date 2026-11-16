@@ -37,13 +37,17 @@ def _sync():
         pass
 
 
-def _next_grid_point(t: float, period: float, include: bool) -> float:
-    """Smallest multiple of period that is >= t (include) or > t."""
-    n = t / period
-    k = math.floor(n + 1e-9)
-    if include and abs(n - round(n)) < 1e-9:
-        return round(n) * period
-    return (k + 1) * period
+def _grid_point_after(t: float, period: float) -> float:
+    """Smallest multiple of period that is > t + eps (eps = 1e-9 max(1, |t|), the trigger tolerance).
+
+    Used after a record/sample at time t: a grid point within eps ABOVE t has just been triggered
+    (t + eps >= point), so it must not be returned again (it was, before 2026-11-16: a step landing
+    within eps below a grid point gave a duplicate record/sample on the next step)."""
+    te = t + 1e-9 * max(1.0, abs(t))
+    k = math.floor(te / period) + 1
+    while k * period <= te:  # rounding of te / period
+        k += 1
+    return k * period
 
 
 class ZPTimedOutputNC(FlucsOutputNC):
@@ -101,10 +105,13 @@ class ZPTimedOutputNC(FlucsOutputNC):
             diag.reset_window()
 
     def _init_grid(self, t: float) -> None:
+        # fresh run: t = 0 is a grid point (recorded); restart: first grid point after t + eps (a point within eps
+        # above t was already recorded by the previous segment at its final step)
         fresh = t == 0.0
-        self._next_record = _next_grid_point(t, self.save_time, fresh)
+        nxt = (lambda p: 0.0) if fresh else (lambda p: _grid_point_after(t, p))
+        self._next_record = nxt(self.save_time)
         if self.sample_time > 0:
-            self._next_sample = _next_grid_point(t, self.sample_time, fresh)
+            self._next_sample = nxt(self.sample_time)
 
     def execute(self):
         """Called every save_steps steps; records only on the time grid."""
@@ -117,11 +124,11 @@ class ZPTimedOutputNC(FlucsOutputNC):
         if self.sample_time > 0 and t + eps >= self._next_sample:
             for diag in self._samplers:
                 self._timed(diag, "sample")
-            self._next_sample = _next_grid_point(t, self.sample_time, False)
+            self._next_sample = _grid_point_after(t, self.sample_time)
 
         if t + eps < self._next_record:
             return
-        self._next_record = _next_grid_point(t, self.save_time, False)
+        self._next_record = _grid_point_after(t, self.save_time)
 
         if self._samplers and all(d.window_count() == 0 for d in self._samplers):
             # Window without samples (e.g. the start of a fresh run when

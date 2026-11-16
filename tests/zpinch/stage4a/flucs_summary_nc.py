@@ -38,7 +38,7 @@ DATA = "/mnt/users/clarkew/data/rmhd_zpinch/output/3D/BP2_anchors_v2"
 sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.expanduser("~/flucs_work/flucs/src"))
 from flucs_to_curvy3d import parse_toml, read_state, to_compact  # noqa: E402
-from flucs.systems.zpinch_fourier.zpinch_readers import load_diag  # noqa: E402
+from flucs.systems.zpinch_fourier.zpinch_readers import duplicate_mask, load_diag, timed_period  # noqa: E402
 
 
 def segments(run):
@@ -70,6 +70,9 @@ def series_0d(segs):
     o = np.argsort(t, kind="stable")
     t, es, em, dt = t[o], es[o], em[o], dt[o]
     keep = np.concatenate([np.diff(t) > 0, [True]])
+    t, es, em, dt = t[keep], es[keep], em[keep], dt[keep]
+    p0 = [os.path.join(s, "output.0d.nc") for s in segs if os.path.exists(os.path.join(s, "output.0d.nc"))]
+    keep = duplicate_mask(t, timed_period(p0[0]) if p0 else None)    # duplicates of pre-2026-11-16 outputs
     return t[keep], es[keep], em[keep], dt[keep]
 
 
