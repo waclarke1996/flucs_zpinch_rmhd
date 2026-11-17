@@ -1,0 +1,18 @@
+Stage 4b monitoring 2026-11-17 ~05:00 UTC (finished segments only; f_analyse --t0 auto on symlinked copies; dt_trend.py)
+run     N0^2 done steps/RvA all/last100 plan ratio  <dt_min/10RvA> per 100 RvA (1e-4)  <Q/Q_MHD> (t0)    <E>   E_out max perp/z   D_out perp/z H | L
+P10B11  7.24  300   7585 / 8046        8771  0.92   0.80 0.82 0.87                     0.854+-0.079 (60) 1295  2.7e-3 / 6.7e-3   .19/.63 | .29/.52
+P09B11  6.09  400   6540 / 6642        7308  0.91   1.04 1.03 1.06 1.01                1.080+-0.203 (60) 1137  3.0e-3 / 6.0e-3   .20/.61 | .34/.45
+P08B11  5.12  200   4635 / 4512        6077  0.74   1.50 1.57                          0.616+-0.068 (60)  503  3.1e-3 / 3.7e-3      -    | .37/.40
+P10B10  5.12  200   5720 / 5966        6077  0.98   1.16 1.16                          0.726+-0.142 (60)  795  2.8e-3 / 4.9e-3   .22/.58 | .34/.43
+P07B11  4.31  500   5083 / 5380        5043  1.07   2.10 1.22 1.65 1.26 1.24           1.433+-0.285 (70)  785  2.9e-3 / 4.6e-3   .21/.56 | .38/.36
+P09B10  4.31  300   4307 / 4503        5043  0.89   1.89 1.52 1.46                     0.537+-0.034 (60)  442  2.8e-3 / 2.9e-3      -    | .36/.39
+ratio = last100 / plan. ms/step: h200 19.0-19.1, a100 43-46 (P08B11, P10B10). min dt over run 4.7e-5 (P09B11) .. 1.0e-4.
+Flags: none for dt (no steady fall after saturation; first value includes the linear phase at dt_max) or E_out (< 1e-2;
+  max 6.7e-3, k_z, H state of P10B11). D_out (k_z) > 0.5 "warn" in H states of P10B11/P09B11/P10B10/P07B11 (and L of P10B11).
+  All pass kz_rms(k_d), E_out/pile, k(kz*) vs k_cut (P09B10 "-" state FAIL = 1 record, nan: artifact).
+P07B11: two-state (f_high 0.32, Q_H 3.34, Q_L 0.64), assess EXTEND to 1100 (rel. error 0.20, 9 switches).
+Not started: P05B11 P06B11 P07B10 P08B10 P09B09 P10B09.
+PROGRESS (runs): done 8 (T1), running 8 (6 T2, 2 T1), todo 36 (35 T2, 1 T1), failed 0.
+R/vA done (validated segments): T1 13200 (t_init sum 6400; all 8 done ran to the 1600 cap), T2 1900 of t_init sum 21300.
+T1 runs: saturate by t~150 into a quiescent state (E const, Q/Q_MHD ~1e-6-1e-4, dt = dt_max 0.01 -> ~100 steps/RvA, cheap);
+  assess's relative-error rule never passes at Q ~ 0 -> extended to the cap. rtx lanes (T1 only) will run out of work soon.

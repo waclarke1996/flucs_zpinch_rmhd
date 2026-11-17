@@ -600,3 +600,18 @@ MONITOR FIRST the 12 extrapolated-cost points (N0^2 > 2.56; the brief said 13, t
 DOC (no code change): DIAGNOSTICS.md 5/15: curvy3d plot-script spectra = 2 x ours (k_perp, k_y, k_x = 0), ~1 x ours at
   k_x > 0 (k_y = 0 part exactly 2 x; mask keeps k_x > 0 on k_y = 0, no double count); k_perp > 42 bins = corner modes
   only, plot/fit k_perp <= 42; header line numbers (54dbc2d) marked approximate. Copy refreshed in flucs/tests/zpinch.
+
+## Stage 4b monitoring 1 (2026-11-17 ~05:00 UTC, prod4 at ~14 h), flucs zpinch @ 64c890b (+ this commit)
+Table: runs/monitor4b/monitor_20261117.txt (f_analyse --t0 auto on symlinked FINISHED segments + monitor4b/dt_trend.py;
+  nothing written into prod4). Started extrapolated points 6/12 (P10B11 P09B11 P08B11 P10B10 P07B11 P09B10): measured
+  steps/RvA (last 100) / plan = 0.92 0.91 0.74 0.98 1.07 0.89 (plan conservative); no steady dt fall; E_out <= 6.7e-3
+  (< 1e-2: no flag); D_out(k_z) 0.56-0.63 "warn" in H states; <Q/Q_MHD> 0.54-1.43. P07B11 two-state -> EXTEND to 1100.
+PROGRESS: 8 done (all T1), 8 running (6 T2, 2 T1), 36 todo, 0 failed; validated R/vA: T1 13200 (t_init sum 6400),
+  T2 1900 of 21300. All 4 H200 now ours (95-98 running); pending 13137499 (h200), 13137502 (a100), 13137505 (rtx).
+SIGN TEST dt 5e-5: runs/stage4b/verify/V3b_signtest_dt5e-5 (only dt_max changed; tfinal 8e-4 = 16 steps), job 13141680
+  (h200, pending behind 13137499). Expect residuals ~4x smaller (~2.2e-7 k_perp, ~1.1e-7 k_z). Analysis next session.
+FIX LATER (after the campaign, not now): (a) campaign_points.csv's t_init column is the default, not the value used
+  (point.json / campaign_plan.txt). (b) assess: quiescent T1 runs (Q/Q_MHD ~1e-6-1e-4 after t~150, E const) never meet
+  the relative-error rule -> all 8 ran to the 1600 cap (cheap: dt = dt_max, ~100 steps/RvA); add an absolute floor.
+  (c) f_analyse: a state with 1 record gives nan -> FAIL (cosmetic). Will added stage4a/campaign_points.csv to sync.sh
+  TOOLS (kept); I added monitor4b/dt_trend.py, the monitor table and the V3b input.

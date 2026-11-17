@@ -21,6 +21,7 @@ stage4a/verify/ref/dmap.txt stage4a/verify/ref/kpar.txt
 stage4a/review/check_transfers.py stage4a/review/check_profiles.py stage4a/review/test_timed_trigger.py
 stage4a/chaintest2/run.sh stage4a/chaintest2/inspect_chain.py stage4a/chaintest3a/run.sh
 stage4a/lanetest2/run.sh
+monitor4b/dt_trend.py monitor4b/monitor_20261117.txt stage4b/verify/V3b_signtest_dt5e-5/input.toml
 stage3e/e_analyse.py
 stage4b/compare_4b.py stage4b/make_inputs.py stage4b/test_kperp_bins.py stage4b/overhead_4b.py
 stage4b/verify/verify.txt stage4b/lanetest3/run.sh
