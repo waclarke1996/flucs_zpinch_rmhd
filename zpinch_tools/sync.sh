@@ -14,7 +14,7 @@ DOCS="DIAGNOSTICS.md RUNNING_FLUCS.md PROGRESS.md NOTES_flucs.md SPEC.md PLAN.md
 TOOLS="
 tools/*.py
 stage4a/chain_run.sh stage4a/lane_worker.sh stage4a/campaign.py stage4a/f_analyse.py stage4a/campaign_plan.txt
-stage4a/speed.txt
+stage4a/speed.txt stage4a/campaign_points.csv
 stage4a/verify/run.sh stage4a/verify/compare_stage4a.py stage4a/verify/capture_tool.py
 stage4a/verify/stub/curvy3d_linear_etg.py stage4a/verify/flucs_run/input.toml stage4a/verify/verify.txt
 stage4a/verify/ref/dmap.txt stage4a/verify/ref/kpar.txt
