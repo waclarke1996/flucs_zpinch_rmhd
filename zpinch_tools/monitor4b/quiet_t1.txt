@@ -1,0 +1,17 @@
+CuPy not found! cudaErrorInsufficientDriver: CUDA driver version is insufficient for CUDA runtime version
+run        kP     kb      <Q>    Qpeak   t_pk t_q<1e-3    Eend   ky0   kx0 ky0kz0 Szon0  top E_kx | E_ky | E_kz (fraction of E) | uperp/bperp/dbpar/upar
+P08B06   1.60 0.2828  2.8e-05  5.5e-04   71.1    never   0.507 0.943 0.008  0.940 0.531  0.5(0.88),1(0.07) | 0(0.93),1(0.04) | 0(0.95),1(0.05) | 0.95/0.02/0.02/0.01
+P09B02   1.90 0.0707  1.3e-05  3.8e-04  111.1    never   0.195 0.897 0.037  0.897 0.327  0.5(0.91),0(0.04) | 0(0.90),1(0.10) | 0(1.00),1(0.00) | 1.00/0.00/0.00/0.00
+P09B03   1.90 0.1000  2.4e-05  7.7e-04   79.9    never   0.593 0.936 0.021  0.934 0.577  0.5(0.94),1.5(0.02) | 0(0.94),1(0.05) | 0(0.99),1(0.01) | 0.99/0.00/0.00/0.00
+P09B04   1.90 0.1414  9.1e-06  3.4e-03   47.2       61    1.05 0.989 0.002  0.987 0.740  0.5(0.99),1.5(0.01) | 0(0.99),1(0.01) | 0(1.00),1(0.00) | 1.00/0.00/0.00/0.00
+P10B00   2.26 0.0354  1.0e-04  6.6e-03  100.4      112   0.869 0.983 0.004  0.983 0.764  0.5(0.94),1.5(0.04) | 0(0.98),1(0.02) | 0(1.00),1(0.00) | 1.00/0.00/0.00/0.00
+P10B01   2.26 0.0500  6.4e-05  8.1e-03   62.9       88   0.943 0.970 0.007  0.966 0.732  0.5(0.95),1.5(0.02) | 0(0.97),1(0.03) | 0(0.99),1(0.01) | 0.99/0.00/0.00/0.00
+P10B02   2.26 0.0707  5.7e-05  9.6e-03   52.7       74    1.11 0.950 0.012  0.944 0.749  0.5(0.94),0(0.02) | 0(0.95),1(0.04) | 0(0.99),1(0.01) | 0.99/0.01/0.00/0.00
+P10B03   2.26 0.1000  6.7e-05  1.3e-02   35.7       70    1.54 0.951 0.010  0.943 0.892  0.5(0.95),1.5(0.01) | 0(0.94),1(0.05) | 0(0.97),1(0.02) | 0.98/0.01/0.01/0.00
+# <Q> = mean Q/Q_MHD for t >= 60; Qpeak/t_pk = max of Q/Q_MHD; t_q<1e-3 = Q stays < 1e-3 from then on ("never" = never
+# reached 1e-3); Eend, ky0, kx0, ky0kz0, Szon0 = means over the final 200 R/vA (zp_scalars); top bins and the split by
+# field at the last record (zp_spectra, fraction of E).
+# READING: zonal-FLOW condensate. 90-99 % of E in k_y = 0, k_z = 0 (2D), 88-99 % in the single box-scale bin
+# |k_x| = 0.5 (the k_x = 0 profile <= 4 %), 95-100 % in u_perp; constant E, Q ~ 1e-5 Q_MHD. Peak Q stays <= 1.3e-2 Q_MHD
+# (3 of 8 never reach 1e-3): no turbulent flux phase at all. Condensate at the lowest nonzero k_x, so its scale is set by
+# L_x = 4 pi (box dependence untested).

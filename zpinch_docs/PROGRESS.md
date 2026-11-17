@@ -615,3 +615,9 @@ FIX LATER (after the campaign, not now): (a) campaign_points.csv's t_init column
   the relative-error rule -> all 8 ran to the 1600 cap (cheap: dt = dt_max, ~100 steps/RvA); add an absolute floor.
   (c) f_analyse: a state with 1 record gives nan -> FAIL (cosmetic). Will added stage4a/campaign_points.csv to sync.sh
   TOOLS (kept); I added monitor4b/dt_trend.py, the monitor table and the V3b input.
+QUIET T1 (runs/monitor4b/quiet_t1.py -> quiet_t1.txt; all 8 FINAL T1, <Q/Q_MHD> 1e-5..1e-4): peak Q/Q_MHD 3.8e-4..1.3e-2
+  at t 36-111; Q < 1e-3 for good from t 61-112 (3 runs never reach 1e-3). Final 200 R/vA: E_ky0_frac 0.90-0.99,
+  E_ky0kz0_frac 0.90-0.99, E_kx0_frac <= 0.04, S_zon0 0.33-0.89; last record: top |k_x| = 0.5 (88-99 % of E),
+  k_y = 0, k_z = 0; 95-100 % of E in u_perp. Reading: a 2D (k_z = 0) zonal-FLOW condensate at the box-scale k_x = 0.5
+  (L_x = 4 pi), not a k_x = 0 profile; no turbulent flux phase. Paper note: these T1 Q values may be box-dependent
+  zeros (an L_x = 8 pi check would show whether the condensate tracks the box).
