@@ -1,0 +1,14 @@
+FINAL T2 runs of prod4, 2026-11-19 (f_analyse --t0 auto on symlinked final/ copies; make_flux_table on the summaries: flux/)
+run    N0^2  <Q/Q_MHD> f_an (t0)  flux_table (window)       Qes/Q  f_high Q_H  Q_L  sw   b_rms H|L    E_out p/z H         E_out p/z L         pile p/z  D_out p/z H | L    kz_rms(k_d) H|L  k(kz*) H|L vs k_cut
+P07B11 4.31  1.561+-0.169 (70)    1.543+-0.17 (0-1600)      0.525  0.38  3.20 0.66  32   26.6|13.5    1.6e-3/4.7e-3       2.9e-3/2.9e-3       <=.60/.81 .22/.56 | .37/.38  63.1|61.8   44|49 vs 20.7
+P09B11 6.09  1.010+-0.141 (60)    0.840+-0.08 (516-1600) R  0.720  0.10  3.77 0.70  15   36.0|17.2    1.4e-3/6.2e-3       2.9e-3/4.1e-3       <=.62/.82 .17/.63 | .33/.46  64.2|64.3   48|59 vs 21.6
+P09B10 4.31  0.663+-0.054 (60)    0.656+-0.05 (8-1600)      0.673  0.05  2.37 0.55  10   25.6|14.1    1.8e-3/4.7e-3       2.8e-3/2.9e-3       <=.61/.82 .24/.56 | .36/.39  64.9|62.2   46|51 vs 20.9
+Criteria (f_analyse): E_out < 1e-2, pile <= 1, kz_rms(k_d) < 78.5, k(kz*) > k_cut: all pass in every state; D_out(k_z) > 0.5 "warn" in every H state.
+R = make_flux_table flag "runaway": Q/Q_MHD reached 31.0 at t 495 (> 10 for 9.4 R/vA, then back; all finite); its auto (MSER) window
+  starts after it (516), f_analyse's at 60 -> 0.84 vs 1.01. P07B11 max 9.3, P09B10 max 3.9.
+Assess history (all three: EXTEND at 500 -> 1100 -> 1600, FINAL at 1600 = cap t_s + 1500):
+  P07B11: 1.433+-0.285 (sw 9) -> 1.749+-0.210 (21) -> 1.561+-0.169 (32) FINAL, open rel. error 0.11
+  P09B11: 1.362+-0.394 (7)    -> 1.050+-0.194 (11) -> 1.010+-0.141 (15) FINAL, open rel. error 0.14
+  P09B10: 0.660+-0.117 (2)    -> 0.648+-0.065 (4)  -> 0.663+-0.054 (10) FINAL (rule met)
+T3 CANDIDATES (substantial H time and D_out(k_z) > 0.5 in H): P07B11 (f_high 0.38, 509 R/vA in H, D_out_z 0.56); P09B11 marginal
+  (f_high 0.10, 145 R/vA, 0.63, highest b_rms 36). Not P09B10 (f_high 0.05, 71 R/vA).

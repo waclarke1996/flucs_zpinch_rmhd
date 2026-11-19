@@ -621,3 +621,22 @@ QUIET T1 (runs/monitor4b/quiet_t1.py -> quiet_t1.txt; all 8 FINAL T1, <Q/Q_MHD> 
   k_y = 0, k_z = 0; 95-100 % of E in u_perp. Reading: a 2D (k_z = 0) zonal-FLOW condensate at the box-scale k_x = 0.5
   (L_x = 4 pi), not a k_x = 0 profile; no turbulent flux phase. Paper note: these T1 Q values may be box-dependent
   zeros (an L_x = 8 pi check would show whether the condensate tracks the box).
+
+## Stage 4b monitoring 2 (2026-11-19 ~00:45 UTC, prod4 at 2.42 d), flucs zpinch @ de4a103 (+ this commit)
+FINAL T2 (3): runs/monitor4b/final_t2_20261119.txt (f_analyse on symlinked copies; build_registry + make_flux_table on
+  the summaries -> monitor4b/flux/). <Q/Q_MHD>: P07B11 1.561+-0.169 (Qes/Q 0.53, f_high 0.38, Q_H/Q_L 3.20/0.66, 32 sw),
+  P09B11 1.010+-0.141 (0.72, 0.10, 3.77/0.70, 15), P09B10 0.663+-0.054 (0.67, 0.05, 2.37/0.55, 10). All states pass
+  (E_out <= 6.2e-3, pile <= 0.82, kz_rms(k_d) <= 65 < 78.5, k(kz*) 44-59 > k_cut ~21); D_out(k_z) 0.56-0.63 warn in H.
+  make_flux_table flags P09B11 "runaway" (Q/Q_MHD 31 at t 495 for ~10 R/vA, finite, recovered); its MSER window starts
+  at 516 -> 0.840 vs f_analyse 1.010 from t 60. DECIDE which convention the paper uses for such bursts.
+  Assess: all three EXTEND 500 -> 1100 -> 1600 and stop at the cap (2 with rel. error 0.11/0.14 still open).
+  T3 CANDIDATES: P07B11 (509 R/vA in H, D_out_z 0.56); P09B11 marginal (145 R/vA in H, 0.63). Not P09B10.
+PROGRESS: T1 11/11 done (all at the 1600 cap); T2 done 3, running 6, todo 32, failed 0; validated R/vA T1 17600
+  (t_init sum 6400), T2 8900 (21300). Every T2 assessed so far (9/9) was extended at 500. 4 h200 + 2 a100 running;
+  spares 13137499/13137502 pending; rtx lanes finished (idle for T2 by design).
+PROJECTION (monitor4b/project.py -> project_20261119.txt; plan steps/RvA x 0.95 measured, h200 19.1 / a100 44.5
+  ms/step, lanes in todo order): if every T2 run ends at the 1600 cap (pattern so far): 5.4 d more -> ~2026-11-24 11 UTC
+  (623 h200-h; campaign ~7.8 d vs 2.75 planned); if they end at 1100: 3.8 d -> ~2026-11-22. Disk at the cap ~20 GB
+  (prod4 now 6.3 GB; T2 at 1600 = 0.40 GB): fits in the 52 GB.
+SIGN TEST dt 5e-5 (V3c_signtest_dt5e-5_rtx, job 13147681, rtx, 1 min): residual 2.01e-7 (k_perp) / 9.54e-8 (k_z) vs
+  8.82e-7 / 4.25e-7 at dt 1e-4: 4.4x smaller = O(dt^2) central-difference error (stage4b/signtest_dt.py). DIAGNOSTICS 12.

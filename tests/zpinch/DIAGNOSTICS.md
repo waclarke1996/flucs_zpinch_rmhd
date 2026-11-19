@@ -356,7 +356,8 @@ compare_4b.py):** A2-T1 turbulent state with κ_P = 0 and ν = 0 (then every lin
 conserves each mode's energy), dt = 1e-4, zp_shells every step: the central difference of the shell energies
 dE_l/dt = Σ_j T[j, l] (kin/mag set) = ½Σ_j T (Elsasser set) to 8.8e-7 (k⊥ shells) and 4.3e-7 (k_z shells) of max|T|
 over 8 steps, same sign on every active shell; total E constant to 7e-11. So T[j, l] is the rate INTO shell l
-FROM shell j (sign confirmed).
+FROM shell j (sign confirmed). dt scaling (`V3c_signtest_dt5e-5_rtx`, `runs/stage4b/signtest_dt.py`): dt 5e-5 gives
+2.0e-7 (k⊥) / 9.5e-8 (k_z), 4.4× smaller: the residual is the O(dt²) central-difference error, not a transfer error.
 
 ## 13. Other diagnostics in `zpinch_fourier_diagnostics.py`
 
