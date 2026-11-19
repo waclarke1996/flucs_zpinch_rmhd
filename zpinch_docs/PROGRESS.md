@@ -654,3 +654,12 @@ IF sondhigpu IS REBOOTED: runs left in claimed/ by dead h200 workers are adopted
   the pending spare 13137499 (one run) or by new workers: `campaign.py lanes runs/prod4 --workers h200:N` + submit.
 PROJECTION (monitor4b/project_20261119b.txt, 4 h200 only): T2 at 1100 -> ~2026-11-23 20 UTC (445 h200-h); at the 1600
   cap -> ~2026-11-26 05 UTC (668 h200-h); with the 2 A100s back ~20 % faster (cap: ~2026-11-25).
+
+## Stage 4b a100 lanes re-added (2026-11-19 11:20 UTC; gpu08 rebooted 07:42 today)
+CHECK: the six recovered entries: P08B11, P10B10 claimed by h200 13137495/496; the other four at the head of todo/T2;
+  failed/ empty; a100 0 active. `campaign.py lanes runs/prod4 --workers a100:3` -> W11191119-00..02-a100.
+JOBS: 13147757 (-00) and 13147758 (-01) started at once on gpu08: they claimed 09_P05B11 / 10_P07B10, both stepping
+  from t = 0 (t ~16 after 4 min, no CUDA errors). 13147759 (-02) PENDING (Resources) = spare.
+CHECK LATER: each a100 worker's run.log shows its claims and each run's tNNNN/run.log shows time steps. If a worker logs
+  cudaErrorUnknown / CUDA_ERROR_* failures again, the A100s are still faulty: it stops after 2 failures, and its entries
+  go to queue/failed/: mv them back to todo/T2 (keep NN_ names, rm the .owner files; NFS: retry after ~1 min).
