@@ -640,3 +640,17 @@ PROJECTION (monitor4b/project.py -> project_20261119.txt; plan steps/RvA x 0.95 
   (prod4 now 6.3 GB; T2 at 1600 = 0.40 GB): fits in the 52 GB.
 SIGN TEST dt 5e-5 (V3c_signtest_dt5e-5_rtx, job 13147681, rtx, 1 min): residual 2.01e-7 (k_perp) / 9.54e-8 (k_z) vs
   8.82e-7 / 4.25e-7 at dt 1e-4: 4.4x smaller = O(dt^2) central-difference error (stage4b/signtest_dt.py). DIAGNOSTICS 12.
+
+## Stage 4b recovery after the gpu08 A100 fault (2026-11-19 ~02:50 UTC), flucs zpinch @ 162c630 (+ this commit)
+DIAGNOSIS = GPU fault: 13137500-502 exited rc 0 at 01:39 after 2 failures each. P08B11 (t 876.6) / P10B10 (t 839.8) died
+  with CUDA_ERROR_LAUNCH_FAILED / CUDA_ERROR_UNKNOWN while stepping normally; P07B10 P05B11 P09B09 P04B11: CuPy init
+  cudaErrorUnknown within 1 s. STATE: P08B11, P10B10 last SEG_OK t0800, check_state OK (t 800.0004); partial t0900 is
+  cleaned by chain_run.sh l.94. The four: no SEG_OK/state/outputs/STOP/FINAL. Nothing deleted by hand.
+NEW a100 workers W11190243-00..02 (13147683-685) failed in 2-6 s, same cudaErrorUnknown: gpu08 NOT rebooted (BootTime
+  2026-11-15), A100s broken until reset. Stopped (rule 5). The six entries are back at the head of todo/T2 for the 4 h200
+  workers. NFS: mv just after a remote worker moved an entry may say "are the same file"; wait ~1 min (RUNNING_FLUCS 7).
+FOR WILL: ask for a reset/reboot of gpu08's A100s, then `campaign.py lanes runs/prod4 --workers a100:3` + submit.
+IF sondhigpu IS REBOOTED: runs left in claimed/ by dead h200 workers are adopted (once sacct shows the owner ended) by
+  the pending spare 13137499 (one run) or by new workers: `campaign.py lanes runs/prod4 --workers h200:N` + submit.
+PROJECTION (monitor4b/project_20261119b.txt, 4 h200 only): T2 at 1100 -> ~2026-11-23 20 UTC (445 h200-h); at the 1600
+  cap -> ~2026-11-26 05 UTC (668 h200-h); with the 2 A100s back ~20 % faster (cap: ~2026-11-25).

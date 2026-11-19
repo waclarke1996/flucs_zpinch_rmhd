@@ -151,6 +151,8 @@ $PY $C plan                                               # campaign_plan.txt (G
   ROOT` (only adds worker folders; existing runs/entries are kept) and submit.
 - A worker killed mid-run: its claim is adopted by the next worker once sacct reports the job ended; the chain resumes
   from the last validated state. failed/: inspect ROOT/<run_id>/chain.log, fix, `mv` the entry back to todo/<tier>/.
+- NFS: an `mv` of a queue entry just after a worker on another node moved it can fail with "are the same file"
+  (login-node cache); wait ~1 min and retry (`mv -n`).
 - Summary with snapshot for a run you want to plot: `flucs_summary_nc.py ROOT/<run_id>` (state.nc is kept).
 
 ## 8. Repo copies of the project files (backup/visibility)
