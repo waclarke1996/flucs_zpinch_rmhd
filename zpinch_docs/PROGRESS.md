@@ -663,3 +663,19 @@ JOBS: 13147757 (-00) and 13147758 (-01) started at once on gpu08: they claimed 0
 CHECK LATER: each a100 worker's run.log shows its claims and each run's tNNNN/run.log shows time steps. If a worker logs
   cudaErrorUnknown / CUDA_ERROR_* failures again, the A100s are still faulty: it stops after 2 failures, and its entries
   go to queue/failed/: mv them back to todo/T2 (keep NN_ names, rm the .owner files; NFS: retry after ~1 min).
+
+## Stage 4b second gpu08 A100 failure (diagnosed 2026-11-20), flucs zpinch @ 501bb5b (+ this commit)
+DIAGNOSIS = same GPU fault (not code/OOM/NaN/dt). a100 jobs 13147757/758 died in the SAME second, 2026-11-19 22:13:31:
+  P05B11 t 212.5 (CUDA_ERROR_LAUNCH_FAILED), P07B10 t 246.1 (CUDA_ERROR_UNKNOWN), both stepping normally (dt 1.9e-4 /
+  3.4e-4, finite). Next claims P04B11, P09B09 and spare 13147759 (P06B10, P08B09) failed at CuPy init (cudaErrorUnknown).
+WHICH A100: nvidia-smi at 13147759's start: "Unable to determine the device handle for GPU3: 0000:AF:00.0: Unknown
+  Error"; same line at the 02:44 attempts after the 1st fault (which also killed both A100 jobs in one second, 01:39:40).
+  GPU3 (PCI AF:00.0) drops off the bus; the other A100 fails at the same instant and then at init (collateral or faulty).
+STATE: P05B11, P07B10 last SEG_OK t0200, check_state OK (t 200.0003); the other four have no outputs. Six entries moved
+  failed/ -> head of todo/T2, .owner removed: failed 0, todo 30, claimed 4 (h200), done 18. No a100 job active/pending.
+OTHERS on gpu08 since the 07:42 reboot: only lotrict, 16 jobs, all exit 0; Slurm records no GPU per job. 13148281 ran
+  through 22:13 (both A100s were ours, so it used an RTX or no GPU); 4 jobs of 4-12 s at 22:19-20: inconclusive.
+FOR THE ADMINS: gpu08 A100 GPU3 (PCI 0000:AF:00.0) fell off the bus 2026-11-19 01:39:40 and 22:13:31 (~10.9 h after the
+  reboot); the other A100's job died in the same second. Check dmesg for Xid at those times; gpu08 is IDLE, not drained.
+A100 LANES OFF until the admins confirm a fix; then `campaign.py lanes runs/prod4 --workers a100:3` (a100:1 if only one
+  is healthy) and submit. PROJECTION 4 h200 (monitor4b/project_20261120.txt): cap 1600 -> ~2026-11-25 13 UTC (497 h200-h).
